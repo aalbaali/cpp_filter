@@ -3,10 +3,10 @@
 
 #include "Eigen/Dense"
 
-// Process model
+// Process model: takes a 'double' control input
 Eigen::VectorXd process_model( Eigen::VectorXd x_km1, Eigen::VectorXd u_km1, Eigen::MatrixXd A, Eigen::MatrixXd B){
     // @params[in] x_km1    :   state at k - 1
-    // @params[in] u_km1    :   control input
+    // @params[in] u_km1    :   control input of type double
     // @params[in] A        :   state matrix
     // @params[in] B        :   control matrix
     return A * x_km1 + B * u_km1;
@@ -63,18 +63,26 @@ int main(){
     // *********************************************
     //  Estaimted states
     std::vector< Eigen::Vector2d> v_x_est( K);
+    //  Estimated covariance
+    std::vector< Eigen::Matrix2d> v_cov_P( K);
+
     // Initialize all estimates to zeros.
     for( int i = 0; i < K; i++){
         v_x_est[ i] << Eigen::Vector2d::Zero();
+        v_cov_P[ i] << Eigen::Matrix2d::Zero();
     }
+
     // Set first pose to the initial condition
     v_x_est[ 0] = x_0;
-
+    v_cov_P[ 0] = cov_P_0;
 
     // *********************************************
     //  Propagate estiamtes
     for( int i = 1; i < K; i++){
+        // Propagate states
         v_x_est[ i] = process_model( v_x_est[ i - 1], v_u[ i - 1], sys_A, sys_B);
+        // Propaget covariance
+        v_cov_P[ i] = sys_A * v_cov_P[ i - 1] * sys_A. transpose() + cov_Q;
     }
 
     // Display propagated states
