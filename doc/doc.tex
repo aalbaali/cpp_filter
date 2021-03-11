@@ -1,0 +1,87 @@
+\documentclass[nobib]{tufte-handout}
+\usepackage{amro-tufte}
+\usepackage{amro-common}
+
+\newcommand{\cpp}{C\texttt{++}}
+
+
+% This command is needed for buildilng in linux
+\captionsetup{compatibility=false}
+
+
+
+
+\title{Filtering in C++}
+\author{Amro Al~Baali}
+
+% Generates the index
+\usepackage{makeidx}
+\makeindex
+
+\begin{document}
+    \maketitle
+
+    \section{Why this document?}
+    This document is provided to explain and clarify the code uploaded with it. The repository includes examples of implementing filters, usually Kalman fitlers, in \cpp. The filters will be mainly implemented on 
+    \begin{enumerate}
+        \item a linear system,
+        \item a nonlinear Euclidean system, and
+        \item a non-Euclidean nonlinear system (usually defined by a Lie group).
+    \end{enumerate}
+
+    \section{The Kalman filter}
+    \subsection{The system}
+    Consider the linear ordinary differential equation (ODE) describing a mass-spring-damper system
+    \begin{align}
+        \label{eq:mass spring damper ode}
+        m\ddot{x}(t) + b\dot{x}(t) + kx(t) &= u(t),
+    \end{align}
+    where $m$ is the mass, $b$ is the damping, $k$ is the spring constant, and $u(t)$ is the forcing function. The system \eqref{eq:mass spring damper ode} can be written in state space form
+    \begin{align}
+        \mbfdot{x} &= \bbm 0 & 1\\ -\f{k}{m} & -\f{b}{m} \ebm \mbf{x} + \bbm 0\\\f{1}{m} \ebm u\\
+        &= \boldsymbol{A}\mbf{x} + \boldsymbol{B}u_{t},
+    \end{align}
+    where 
+    \begin{align}
+        \label{eq:DT linear kinematic model}
+        \mbf{x} &= \bbm x & \dot{x} \ebm^{\trans},
+    \end{align}
+    and the time arguments $(t)$ are dropped for brevity.
+
+    The disrete-time kinematic model is given by
+    \begin{align}
+        \mbf{x}_{k} &= \mbf{A}\mbf{x}_{k-1} + \mbf{B}u_{k-1},        
+    \end{align}
+    where the discrete-time system matrices $\mbf{A}$ and $\mbf{B}$ are computed using some discretization scheme. For the linear example above, the $\mbf{A}$ matrix is given by
+    \begin{align}
+        \mbf{A} &= \exp\left( \boldsymbol{A} T_{k} \right),\\
+        \mbf{B} &= \int_{0}^{T_{k}}\exp(\boldsymbol{A}\alpha)\dee\alpha \boldsymbol{B},
+    \end{align}
+    where $T_{k}$ is the sampling period.
+     
+    The matrix $\mbf{B}$ can be approximated using forward Euler to get
+    \begin{align}
+        \mbf{B} &\approx T_{k}\boldsymbol{B}.
+    \end{align}
+
+    \subsection{Process model}
+    The discrete-time process model\sidenote{Also referred to as the kinematic model, motion model, progression model, \etc.} is used in the \emph{prediction} step of the Kalman filter. It is given by
+    \begin{align}
+        \label{eq:DT linear process model}
+        \mbf{x}_{k} &= \mbf{A}\mbf{x}_{k-1} + \mbf{B}\mbf{u}_{k-1} + \mbf{L}\mbf{w}_{k-1},
+    \end{align}
+    where $\mbf{x}_{k}\in\rnums^{n_{x}}$ is the state, $\mbf{u}_{k}\in\rnums^{n_{u}}$ is the control input, and $\mbf{w}_{k}\in\rnums^{n_{w}}$ where $\mbf{w}_{k}\sim\mc{N}\left( \mbf{0}, \mbf{Q}_{k} \right)$ is the process noise and $\mbf{Q}_{k}$ is the process noise covariance. 
+
+    \subsection{Measurement functions}
+    The correction step requires a measurement model which is given by
+    \begin{align}
+        \mbf{y}_{k} &= \mbf{C}\mbf{x}_{k} + \mbf{M}\mbf{n}_{k},
+    \end{align}
+    where $\mbf{y}_{k}\in\rnums^{n_{y}}$ and $\mbf{n}_{k}\in\rnums^{n_{n}}$ where $\mbf{n}_{k}\sim\mc{N}\left( \mbf{0}, \mbf{R}_{k} \right)$ is the measurement noise and $\mbf{R}_{k}$ is the measurement noise covariance.
+
+    For the example presented, the measurement is a position measurememnt, so the measurement function is given by
+    \begin{align}
+        y_{k} &= \bbm 1 & 0 \ebm\mbf{x}_{k} + n_{k}\\
+        &= \mbf{C}\mbf{x}_{k} + n_{k}.
+    \end{align}
+\end{document}
