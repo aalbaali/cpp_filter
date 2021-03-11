@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 
+#include <unsupported/Eigen/MatrixFunctions>
 #include "Eigen/Dense"
 
 // Process model: takes a 'double' control input
@@ -21,24 +22,54 @@ Eigen::VectorXd process_model( Eigen::VectorXd x_km1, double u_km1, Eigen::Matri
 
 
 int main(){
-    // *********************************************
-    // System parameters
-    // System matrix
+
+    // Declare the discrete-time (DT) system matrices. These are to be computed using a zero-order hold using continous-time (CT) matrices
     Eigen::Matrix2d sys_A;
-    // Control matrix
     Eigen::Vector2d sys_B;
-    // System is a mass-spring-damper system with unit mass, spring-constant, and damping.
-    sys_A << 0, 1, -1, -1;
-    sys_B << 0, 1;
+
+    {
+        // The parameters defined in this scope are only needed to compute the DT matrices. Therefore, they'll be deleted once they leave the scope.
+        // *********************************************
+        // Cotinuous-time (CT) system parameters
+        // Continuous-time system matrix
+        Eigen::Matrix2d sys_A_ct;
+        // Continuous-time control matrix
+        Eigen::Vector2d sys_B_ct;
+        // System is a mass-spring-damper system with unit mass, spring-constant, and damping.
+        sys_A_ct << 0, 1, -1, -1;
+        sys_B_ct << 0, 1;
+
+        // *********************************************
+        //  Compute discrete-time (DT) system parameters
+        // The computed matrix is [A, B; 0, 1]
+        Eigen::Matrix<double, 3, 3> mat_AB_I;
+        // Set to identity
+        mat_AB_I.setZero();
+        // Set the two blocks
+        mat_AB_I.block<2, 2>(0, 0) = sys_A_ct;
+        mat_AB_I.block<2, 1>(0, 2) = sys_B_ct;
+
+        // Compute exponential matrix (includes the DT matrices)
+        mat_AB_I = mat_AB_I.exp();    
+
+    #ifdef DEBUG
+        std::cout << "mat_AB_I:\n" << mat_AB_I << std::endl;
+    #endif
+
+        // Extract the associated blocks
+        sys_A = mat_AB_I.block< 2, 2>(0, 0);
+        sys_B = mat_AB_I.block< 2, 1>(0, 2);
+    }
+
+#ifdef DEBUG
+    std::cout << "sys_A_dt:\n" << sys_A << std::endl;
+    std::cout << "sys_B_dt:\n" << sys_B << std::endl;
+#endif
 
     // Covariances
     //      Process covariance
     Eigen::Matrix2d cov_Q;    
     cov_Q << 1, 0, 0, 1;
-
-#ifdef DEBUG
-    std::cout << "sys_A:\n" << sys_A << "\nsys_B:\n" << sys_B << std::endl;
-#endif
 
     // *********************************************
     // Initial conditions
@@ -101,4 +132,5 @@ int main(){
 #ifdef DEBUG
     std::cout << "x_1:\t" << x_1 << std::endl;
 #endif
+
 }
