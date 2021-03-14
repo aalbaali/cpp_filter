@@ -7,6 +7,13 @@
 // Include parser
 #include "data_parser.h"
 
+// Vector template
+template< size_t Size, typename T = double>
+using Vector = Eigen::Matrix< T, Size, 1>;
+
+template< size_t Size>
+using Vectord = Vector< Size, double>;
+
 // Process model: takes a 'double' control input
 Eigen::VectorXd process_model( Eigen::VectorXd x_km1, Eigen::VectorXd u_km1, Eigen::MatrixXd A, Eigen::MatrixXd B){
     // @params[in] x_km1    :   state at k - 1
@@ -22,6 +29,75 @@ Eigen::VectorXd process_model( Eigen::VectorXd x_km1, double u_km1, Eigen::Matri
     // @params[in] B        :   control matrix
     return A * x_km1 + B * u_km1;
 }
+
+// Class of measurements. Contains i) measurement, ii) covariance, and iii) time of the measurement.
+template<size_t Size, typename T = double>
+class Measurement{
+    public:
+        Measurement(){
+            _meas = Eigen::Matrix< T, Size, 1>::Zero();
+            _cov  = Eigen::Matrix< T, Size, Size>::Zero();
+            _t = -1.0;
+        }
+        
+
+        // Import measurements from a row matrix of measurements (first element is time, second measurements are measurement values, and then finally, the covariance matrix (n * (n+1)/2 elements)).
+        Measurement( Eigen::Matrix< T, Size * (Size + 1) + 1, 1> meas_row_in){
+            _t = meas_row_in( 0);
+
+            _meas = meas_row_in.segment( 1, Size);
+            
+            Eigen::Matrix< T, Size * Size> cov_vec = meas_row_in.segment( Size + 1, Size * Size);
+            for( int i; i < Size; i++){
+                for( int j; j < Size; j++){
+                    _cov( i, j) = cov_vec( Size * i + j, 0);
+                }
+            }
+        }
+
+        Measurement( Eigen::Matrix< T, Size, 1> meas_in,
+            Eigen::Matrix< T, Size, Size> cov_in = Eigen::Matrix< T, Size, Size>::Identity(), double time_in = -1){
+            // Constructor that takes measurement and covariance (with default values).
+            _meas = meas_in;
+            _cov  = cov_in;
+            _t    = time_in;
+        }
+
+        // Getters
+        Eigen::Matrix< T, Size, 1> meas(){ return _meas;}
+        Eigen::Matrix< T, Size, Size> cov(){ return  _cov;}
+        double time(){ return _t;}
+
+        // Setters
+        void setMeas( Eigen::Matrix< T, Size, 1> meas_in){
+            this->_meas = meas_in;
+        }
+
+        void setCov( Eigen::Matrix<T, Size, 2> cov_in){
+            this->_cov = cov_in;
+        }
+        void setTime( double time_in){ _t = time_in;}
+
+    private:
+        Eigen::Matrix< double, Size, 1> _meas;
+        Eigen::Matrix< double, Size, Size> _cov;
+
+        // Time of measurement
+        double _t;
+};
+
+// Acceleration measurement class (takes a scalar input)
+typedef Measurement< 1, double> MeasControlInput;
+
+// // Function that imports a vector of the control input measurements
+// std::vector< MeasControlInput> importMeasControlInput( const std::string &file_path){
+//     // Import the data
+//     auto data_vec = importData( file_path);
+//     std::vector< MeasControlInput> vec_meas_u( data_vec.size());
+//     for( size_t i = 0; i < data_vec.size(); i++){
+//         vec_meas_u[ i] = MeasControlInput( data_vec[ i]);
+//     }
+// }
 
 // Function to parse the control inputs
 template< typename T = double>
@@ -61,6 +137,7 @@ int main(){
     // Declare the discrete-time (DT) system matrices. These are to be computed using a zero-order hold using continous-time (CT) matrices
     Eigen::Matrix2d sys_A;
     Eigen::Vector2d sys_B;
+    Eigen::Vector2d sys_L;
 
     {
         // The parameters defined in this scope are only needed to compute the DT matrices. Therefore, they'll be deleted once they leave the scope.
@@ -94,6 +171,7 @@ int main(){
         // Extract the associated blocks
         sys_A = mat_AB_I.block< 2, 2>(0, 0);
         sys_B = mat_AB_I.block< 2, 1>(0, 2);
+        sys_L = sys_B;
     }
 
 #ifdef DEBUG
@@ -101,10 +179,13 @@ int main(){
     std::cout << "sys_B_dt:\n" << sys_B << std::endl;
 #endif
 
+    // Variance on control input
+    double var_u = 1;
     // Covariances
     //      Process covariance
     Eigen::Matrix2d cov_Q;    
-    cov_Q << 1, 0, 0, 1;
+    // cov_Q << 1, 0, 0, 1;
+    cov_Q = sys_L * var_u * sys_L.transpose();
 
     // *********************************************
     // Initial conditions
@@ -123,46 +204,46 @@ int main(){
     // auto v_u = importControlInput( K);
     auto v_u = importControlInput( file_name_u);
     
-    // *********************************************
-    //  Estaimted states
-    std::vector< Eigen::Vector2d> v_x_est( K);
-    //  Estimated covariance
-    std::vector< Eigen::Matrix2d> v_cov_P( K);
+//     // *********************************************
+//     //  Estaimted states
+//     std::vector< Eigen::Vector2d> v_x_est( K);
+//     //  Estimated covariance
+//     std::vector< Eigen::Matrix2d> v_cov_P( K);
 
-    // Initialize all estimates to zeros.
-    for( int i = 0; i < K; i++){
-        v_x_est[ i] << Eigen::Vector2d::Zero();
-        v_cov_P[ i] << Eigen::Matrix2d::Zero();
-    }
+//     // Initialize all estimates to zeros.
+//     for( int i = 0; i < K; i++){
+//         v_x_est[ i] << Eigen::Vector2d::Zero();
+//         v_cov_P[ i] << Eigen::Matrix2d::Zero();
+//     }
 
-    // Set first pose to the initial condition
-    v_x_est[ 0] = x_0;
-    v_cov_P[ 0] = cov_P_0;
+//     // Set first pose to the initial condition
+//     v_x_est[ 0] = x_0;
+//     v_cov_P[ 0] = cov_P_0;
 
-    // *********************************************
-    //  Propagate estiamtes
-    for( int i = 1; i < K; i++){
-        // Propagate states
-        v_x_est[ i] = process_model( v_x_est[ i - 1], v_u[ i - 1], sys_A, sys_B);
-        // Propaget covariance
-        v_cov_P[ i] = sys_A * v_cov_P[ i - 1] * sys_A. transpose() + cov_Q;
-    }
+//     // *********************************************
+//     //  Propagate estiamtes
+//     for( int i = 1; i < K; i++){
+//         // Propagate states
+//         v_x_est[ i] = process_model( v_x_est[ i - 1], v_u[ i - 1], sys_A, sys_B);
+//         // Propaget covariance
+//         v_cov_P[ i] = sys_A * v_cov_P[ i - 1] * sys_A. transpose() + cov_Q;
+//     }
 
-    // Display propagated states
-    std::cout << "Propageted states:" << std::endl;
-    for( auto x : v_x_est){
-        std::cout << x.transpose() << "\n";
-    }
-    std::cout << std::endl;
+//     // Display propagated states
+//     std::cout << "Propageted states:" << std::endl;
+//     for( auto x : v_x_est){
+//         std::cout << x.transpose() << "\n";
+//     }
+//     std::cout << std::endl;
     
-#ifdef DEBUG
-    std::cout << "x_K:\n" << v_x_est[K - 1] << std::endl;
-#endif
-    // Propagate state
-    auto x_1 = process_model( x_0, v_u[0], sys_A, sys_B);
+// #ifdef DEBUG
+//     std::cout << "x_K:\n" << v_x_est[K - 1] << std::endl;
+// #endif
+//     // Propagate state
+//     auto x_1 = process_model( x_0, v_u[0], sys_A, sys_B);
 
-#ifdef DEBUG
-    std::cout << "x_1:\t" << x_1 << std::endl;
-#endif
+// #ifdef DEBUG
+//     std::cout << "x_1:\t" << x_1 << std::endl;
+// #endif
 
 }
