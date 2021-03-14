@@ -23,12 +23,21 @@ Eigen::VectorXd process_model( Eigen::VectorXd x_km1, double u_km1, Eigen::Matri
     return A * x_km1 + B * u_km1;
 }
 
-// // Function to parse the control inputs
-// template< typename T = double>
-// std::vector<T> importControlInput(std::string &file_path){
-//     // file_path is a path to the control input .txt file
-    
-// }
+// Function to parse the control inputs
+template< typename T = double>
+std::vector<T> importControlInput(const std::string &file_path){
+    // file_path is a path to the control input .txt file
+
+    // Import the data
+    auto data_vec = importData( file_path);
+    // From the imported data, import a vector of the control inputs only (ignore the time measurements and variance)
+    std::vector< T> vec_u( data_vec.size());
+    for( size_t i = 0; i < data_vec.size(); i++){
+        // Import the second reading, which is the control input. The first reading is the time value
+        vec_u[ i] = data_vec[ i][1];
+    }
+    return vec_u;
+}
 // Function to parse the control inputs
 template< typename T = double>
 std::vector<T> importControlInput(const int K){
@@ -42,6 +51,10 @@ std::vector<T> importControlInput(const int K){
     }
     return v_u;
 }
+
+
+// Control input file name
+const std::string file_name_u = "/home/aalbaali/Documents/Code_base/Examples/Data_generator/linear_system/data/msd_acc.txt";
 
 int main(){
 
@@ -107,8 +120,9 @@ int main(){
 
     // *********************************************
     // Control inputs
-    auto v_u = importControlInput( K);
-
+    // auto v_u = importControlInput( K);
+    auto v_u = importControlInput( file_name_u);
+    
     // *********************************************
     //  Estaimted states
     std::vector< Eigen::Vector2d> v_x_est( K);
