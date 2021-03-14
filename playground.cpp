@@ -25,21 +25,6 @@ class Measurement{
             _cov  = Eigen::Matrix< T, Size, Size>::Zero();
             _t = -1.0;
         }
-        
-
-        // // Import measurements from a row matrix of measurements (first element is time, second measurements are measurement values, and then finally, the covariance matrix (n * (n+1)/2 elements)).
-        // Measurement( Eigen::Matrix< T, Size * (Size + 1) + 1, 1> meas_row_in){
-        //     _t = meas_row_in( 0);
-
-        //     _meas = meas_row_in.segment( 1, Size);
-            
-        //     Eigen::Matrix< T, Size * Size> cov_vec = meas_row_in.segment( Size + 1, Size * Size);
-        //     for( int i; i < Size; i++){
-        //         for( int j; j < Size; j++){
-        //             _cov( i, j) = cov_vec( Size * i + j, 0);
-        //         }
-        //     }
-        // }
 
         Measurement( Eigen::Matrix< T, Size, 1> meas_in,
             Eigen::Matrix< T, Size, Size> cov_in = Eigen::Matrix< T, Size, Size>::Identity(), double time_in = -1){
@@ -47,6 +32,24 @@ class Measurement{
             _meas = meas_in;
             _cov  = cov_in;
             _t    = time_in;
+        }
+
+        template<typename VectorT>
+        Measurement( std::vector<VectorT> row_of_raw_data){
+            double time = row_of_raw_data[ 0];
+            Eigen::Vectord< Size> meas;
+            Eigen::Matrix< double, Size, Size> cov;
+            for( size_t i = 0; i < Size; i++){
+                meas( i) = row_of_raw_data[ i + 1];
+                for( size_t j = 0; j < Size; j++){
+                    cov( i, j) = row_of_raw_data[ 1 + Size + i * Size + j];
+                }
+            }
+            // Store objects
+            _t    = time;
+            _meas = meas;
+            // Ensure symmetry of the covariance matrix
+            _cov  =  (1/2) * ( cov + cov.transpose());
         }
 
         // Getters
@@ -72,71 +75,15 @@ class Measurement{
         double _t;
 };
 
+const size_t size_u = 1;
 // Acceleration measurement class (takes a scalar input)
-typedef Measurement< 1, double> MeasControlInput;
+typedef Measurement< size_u, double> MeasControlInput;
 
-// // Function that imports a vector of the control input measurements
-// std::vector< MeasControlInput> importMeasControlInput( const std::string &file_path){
-//     // Import the data
-//     auto data_vec = importData( file_path);
-//     std::vector< MeasControlInput> vec_meas_u( data_vec.size());
-//     for( size_t i = 0; i < data_vec.size(); i++){
-//         vec_meas_u[ i] = MeasControlInput( data_vec[ i]);
-//     }
-// }
 
-// Function to parse the control inputs
-template< typename T = double>
-std::vector<T> importControlInput(const std::string &file_path){
-    // file_path is a path to the control input .txt file
-
-    // Import the data
-    auto data_vec = importData( file_path);
-    // From the imported data, import a vector of the control inputs only (ignore the time measurements and variance)
-    std::vector< T> vec_u( data_vec.size());
-    for( size_t i = 0; i < data_vec.size(); i++){
-        // Import the second reading, which is the control input. The first reading is the time value
-        vec_u[ i] = data_vec[ i][1];
-    }
-    return vec_u;
-}
-// Function to parse the control inputs
-template< typename T = double>
-std::vector<T> importControlInput(const int K){
-    // K : Number of poses
-
-    // This implementation of the function simply generates the data
-    std::vector< double> v_u( K - 1);
-    // Set all control inputs to 1
-    for( int i : v_u){
-        v_u[i] = 1.;
-    }
-    return v_u;
-}
-
-// Function that extracts the measurement object given the row from the raw data file
-template<size_t size_u, typename T>
-MeasControlInput getMeasurementObject( std::vector<T> row_of_raw_data){
-    double time = row_of_raw_data[ 0];
-    Eigen::Vectord< size_u> meas;
-    Eigen::Matrix< double, size_u, size_u> cov;
-    for( size_t i = 0; i < size_u; i++){
-        meas( i) = row_of_raw_data[ i + 1];
-        for( size_t j = 0; j < size_u; j++){
-            cov( i, j) = row_of_raw_data[ 1 + size_u + i * size_u + j];
-        }
-    }
-    MeasControlInput meas_obj( meas, cov, time);
-
-    return meas_obj;
-}
 // Control input file name
 const std::string file_name_u = "/home/aalbaali/Documents/Code_base/Examples/Data_generator/linear_system/data/msd_acc.txt";
 
 int main(){
-    // Store the row of data into an approparite object
-    //  Get size of the measurement
-    const size_t size_u = 1;
 
     // Import vector data
     auto data_vec = importData( file_name_u);
@@ -144,21 +91,14 @@ int main(){
     // Vector of measurement objects
     std::vector< MeasControlInput> vec_meas_obj( data_vec.size());
     for( int i = 0; i < data_vec.size(); i++){
-        vec_meas_obj[ i] = getMeasurementObject< size_u>( data_vec[i]);
+        // vec_meas_obj[ i] = getMeasurementObject< MeasControlInput, size_u>( data_vec[i]);
+        vec_meas_obj[ i] = MeasControlInput( data_vec[i]);
     }
     
     // Extract the first row
-    auto first_meas = vec_meas_obj[0];
+    auto first_meas = vec_meas_obj[10];
     // Output the fields
     std::cout << "time: " << first_meas.time() << std::endl;
     std::cout << "meas: " << first_meas.meas().transpose() << std::endl;
     std::cout << "cov: " << first_meas.cov() << std::endl;
-
-    
-    
-
-    // *********************************************
-    // Control inputs
-    // auto v_u = importControlInput( K);
-    auto v_u = importControlInput( file_name_u);
 }
