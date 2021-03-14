@@ -1,0 +1,3 @@
+[submodule "include/data_generator"]
+	path = include/data_generator
+	url = git@github.com:aalbaa/data_generator.git

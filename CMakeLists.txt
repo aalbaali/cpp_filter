@@ -5,7 +5,11 @@ find_package(Eigen3 REQUIRED)
 # find_package(manif REQUIRED)
 add_executable(${PROJECT_NAME} kalman_filter.cpp)
 
+# Include the parser
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "include/data_generator/cpp_parser/")
+
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIRS})
+
 # # Add manif include directories to the target
 # target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${manif_INCLUDE_DIRS})
 

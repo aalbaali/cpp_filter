@@ -4,6 +4,9 @@
 #include <unsupported/Eigen/MatrixFunctions>
 #include "Eigen/Dense"
 
+// Include parser
+#include "data_parser.h"
+
 // Process model: takes a 'double' control input
 Eigen::VectorXd process_model( Eigen::VectorXd x_km1, Eigen::VectorXd u_km1, Eigen::MatrixXd A, Eigen::MatrixXd B){
     // @params[in] x_km1    :   state at k - 1
@@ -20,6 +23,25 @@ Eigen::VectorXd process_model( Eigen::VectorXd x_km1, double u_km1, Eigen::Matri
     return A * x_km1 + B * u_km1;
 }
 
+// // Function to parse the control inputs
+// template< typename T = double>
+// std::vector<T> importControlInput(std::string &file_path){
+//     // file_path is a path to the control input .txt file
+    
+// }
+// Function to parse the control inputs
+template< typename T = double>
+std::vector<T> importControlInput(const int K){
+    // K : Number of poses
+
+    // This implementation of the function simply generates the data
+    std::vector< double> v_u( K - 1);
+    // Set all control inputs to 1
+    for( int i : v_u){
+        v_u[i] = 1.;
+    }
+    return v_u;
+}
 
 int main(){
 
@@ -85,11 +107,7 @@ int main(){
 
     // *********************************************
     // Control inputs
-    std::vector< double> v_u( K - 1);
-    // Set all control inputs to 1
-    for( int i : v_u){
-        v_u[i] = 1.;
-    }
+    auto v_u = importControlInput( K);
 
     // *********************************************
     //  Estaimted states
