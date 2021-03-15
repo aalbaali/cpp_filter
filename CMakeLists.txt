@@ -4,8 +4,8 @@ project(kalman_filter)
 find_package(Eigen3 REQUIRED)
 # # Find the manif library
 # find_package(manif REQUIRED)
-# add_executable(${PROJECT_NAME} kalman_filter.cpp)
-add_executable(${PROJECT_NAME} playground.cpp)
+add_executable(${PROJECT_NAME} kalman_filter.cpp)
+# add_executable(${PROJECT_NAME} playground.cpp)
 
 # # Include the parser
 # target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "include/data_generator/cpp_parser/")

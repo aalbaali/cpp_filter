@@ -1,6 +1,9 @@
 #include <iostream>
 #include <vector>
 #include <iomanip> // For nice outputs (setw)
+#include <string>  // To definte the file_name for exporting data
+#include <sstream>
+
 
 #include <unsupported/Eigen/MatrixFunctions>
 #include "Eigen/Dense"
@@ -8,6 +11,7 @@
 // Include parser
 #include "data_parser.h"
 #include "Measurement.h"
+#include "Exporter.h"
 
 Eigen::VectorXd process_model( Eigen::VectorXd x_km1, Eigen::VectorXd u_km1, Eigen::MatrixXd A, Eigen::MatrixXd B){
     return A * x_km1 + B * u_km1;
@@ -192,4 +196,32 @@ int main(){
         displayRV( meas);
         std::cout << std::endl;
     }
+
+    
+
+    // ******************************************
+    // Exporting data
+    std::string file_name_out = "msd_kf_estimates.txt";
+    std::cout << "\nExporting estimates to '" << file_name_out << "'" << std::endl;
+
+    // Definer header
+    std::vector<std::string> header( size_x * (size_x + 1) + 1);
+    // First entry: time
+    header[0] = "Time";
+    // Second inputs: states
+    for(size_t i = 0; i < size_x; i++){
+        std::stringstream ss;
+        ss << "x_" << i+1;
+        ss >> header[1 + i];
+    }
+    // Third inputs: covariances
+    for(size_t j = 0; j < size_x; j++){
+        for(size_t i = 0; i < size_x; i++){
+            std::stringstream ss;
+            ss << "cov_" << (i+1) << (j+1);
+            ss >> header[1 + size_x + size_x * j + i];
+        }
+    }
+
+    RandomVariable::LogMeasurements( estiamted_states, header, file_name_out);
 }
