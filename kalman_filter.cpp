@@ -192,13 +192,4 @@ int main(){
         displayRV( meas);
         std::cout << std::endl;
     }
-
-// #ifdef DEBUG
-//     // Display propagated states
-//     std::cout << "Propageted states:" << std::endl;
-//     for( auto x : estiamted_states){
-//         std::cout << x.meas().transpose() << "\n";
-//     }
-//     std::cout << std::endl;
-// #endif
 }
