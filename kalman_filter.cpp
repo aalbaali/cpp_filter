@@ -9,11 +9,7 @@
 #include "data_parser.h"
 #include "Measurement.h"
 
-// Process model: takes a 'double' control input
 Eigen::VectorXd process_model( Eigen::VectorXd x_km1, Eigen::VectorXd u_km1, Eigen::MatrixXd A, Eigen::MatrixXd B){
-    return A * x_km1 + B * u_km1;
-}
-Eigen::VectorXd process_model( Eigen::VectorXd x_km1, double u_km1, Eigen::MatrixXd A, Eigen::MatrixXd B){
     return A * x_km1 + B * u_km1;
 }
 
@@ -43,6 +39,12 @@ int main(){
     Eigen::Matrix2d sys_A;
     Eigen::Vector2d sys_B;
     Eigen::Vector2d sys_L;
+
+    // GPS sensor
+    Eigen::Matrix<double, size_y, size_x> sys_C;
+    sys_C << 1, 0;
+    Eigen::Matrix<double, size_y, size_y> sys_M;
+    sys_M.setIdentity();
 
     {
         // The parameters defined in this scope are only needed to compute the DT matrices. Therefore, they'll be deleted once they leave the scope.
@@ -111,7 +113,8 @@ int main(){
     // *********************************************
     //  Number of poses 
     // TODO: change it to match the number of control input measurements
-    const unsigned int K = 3;
+    const unsigned int K = meas_control_input.size() + 1;
+    // const unsigned int K = 10;
 
     // *********************************************
     //  Estaimted states
@@ -141,6 +144,8 @@ int main(){
     // Control input and covariance at previous time step
     Eigen::Matrix<double, size_u, 1> u_km1;
     Eigen::Matrix<double, size_u, size_u> Q_km1;
+    // Index that keeps track of the gps measurements
+    size_t idx_gps = 0;
     for( int i = 1; i < K; i++){
         // Get the pose estimate and covariance at the previous step
         x_km1 = estiamted_states[i - 1].meas();
@@ -154,7 +159,27 @@ int main(){
         // Ensure symmetry of the covariance
         P_k = 0.5 * (P_k + P_k.transpose());
 
+        // Check for correction
+        if( meas_gps[idx_gps].time() <= estiamted_states[i].time()){
+            // Implement a correction
+            auto R_k = meas_gps[idx_gps].cov();
+            auto y_k = meas_gps[idx_gps].meas();
+            // Compute S_k
+            Eigen::Matrix< double, size_y, size_y> S_k = sys_C * P_k * sys_C.transpose() + sys_M * R_k * sys_M.transpose();
+            // Ensure symmetry
+            S_k = 0.5 * (S_k + S_k.transpose());
+            // Compute Kalman gain
+            Eigen::Matrix<double, size_x, size_y> K_k = 
+                (S_k.ldlt().solve(sys_C * P_k)).transpose();
+            // Update state estimate (xhat)
+            x_k += K_k * (y_k - sys_C * x_k);
+            // Update covariance
+            P_k = ((Eigen::Matrix<double, size_x, size_x>::Identity()) - K_k * sys_C) * P_k;
+            // Ensure symmetry
+            P_k = 0.5 * (P_k + P_k.transpose());
 
+            idx_gps++;
+        }
         // For now, store estimates
         estiamted_states[i].setMeas( x_k);
         estiamted_states[i].setCov(  P_k);
