@@ -1,136 +1,41 @@
 #include <iostream>
 #include <vector>
+#include <iomanip> // For nice outputs (setw)
 
 #include <unsupported/Eigen/MatrixFunctions>
 #include "Eigen/Dense"
 
 // Include parser
 #include "data_parser.h"
-
-// Vector template
-template< size_t Size, typename T = double>
-using Vector = Eigen::Matrix< T, Size, 1>;
-
-template< size_t Size>
-using Vectord = Vector< Size, double>;
+#include "Measurement.h"
 
 // Process model: takes a 'double' control input
 Eigen::VectorXd process_model( Eigen::VectorXd x_km1, Eigen::VectorXd u_km1, Eigen::MatrixXd A, Eigen::MatrixXd B){
-    // @params[in] x_km1    :   state at k - 1
-    // @params[in] u_km1    :   control input of type double
-    // @params[in] A        :   state matrix
-    // @params[in] B        :   control matrix
     return A * x_km1 + B * u_km1;
 }
 Eigen::VectorXd process_model( Eigen::VectorXd x_km1, double u_km1, Eigen::MatrixXd A, Eigen::MatrixXd B){
-    // @params[in] x_km1    :   state at k - 1
-    // @params[in] u_km1    :   control input
-    // @params[in] A        :   state matrix
-    // @params[in] B        :   control matrix
     return A * x_km1 + B * u_km1;
 }
 
-// Class of measurements. Contains i) measurement, ii) covariance, and iii) time of the measurement.
-template<size_t Size, typename T = double>
-class Measurement{
-    public:
-        Measurement(){
-            _meas = Eigen::Matrix< T, Size, 1>::Zero();
-            _cov  = Eigen::Matrix< T, Size, Size>::Zero();
-            _t = -1.0;
-        }
-        
+// Dimension of control input measurements
+const size_t size_u = 1;
+// Dimension of the exeteroceptive measurement
+const size_t size_y = 1;
+// Dimension of each pose
+const size_t size_x = 2;
 
-        // Import measurements from a row matrix of measurements (first element is time, second measurements are measurement values, and then finally, the covariance matrix (n * (n+1)/2 elements)).
-        Measurement( Eigen::Matrix< T, Size * (Size + 1) + 1, 1> meas_row_in){
-            _t = meas_row_in( 0);
+typedef Eigen::Matrix< double, size_x, 1>       VectorPose;
+typedef Eigen::Matrix< double, size_x, size_x>  CovPose;
 
-            _meas = meas_row_in.segment( 1, Size);
-            
-            Eigen::Matrix< T, Size * Size> cov_vec = meas_row_in.segment( Size + 1, Size * Size);
-            for( int i; i < Size; i++){
-                for( int j; j < Size; j++){
-                    _cov( i, j) = cov_vec( Size * i + j, 0);
-                }
-            }
-        }
-
-        Measurement( Eigen::Matrix< T, Size, 1> meas_in,
-            Eigen::Matrix< T, Size, Size> cov_in = Eigen::Matrix< T, Size, Size>::Identity(), double time_in = -1){
-            // Constructor that takes measurement and covariance (with default values).
-            _meas = meas_in;
-            _cov  = cov_in;
-            _t    = time_in;
-        }
-
-        // Getters
-        Eigen::Matrix< T, Size, 1> meas(){ return _meas;}
-        Eigen::Matrix< T, Size, Size> cov(){ return  _cov;}
-        double time(){ return _t;}
-
-        // Setters
-        void setMeas( Eigen::Matrix< T, Size, 1> meas_in){
-            this->_meas = meas_in;
-        }
-
-        void setCov( Eigen::Matrix<T, Size, 2> cov_in){
-            this->_cov = cov_in;
-        }
-        void setTime( double time_in){ _t = time_in;}
-
-    private:
-        Eigen::Matrix< double, Size, 1> _meas;
-        Eigen::Matrix< double, Size, Size> _cov;
-
-        // Time of measurement
-        double _t;
-};
-
-// Acceleration measurement class (takes a scalar input)
-typedef Measurement< 1, double> MeasControlInput;
-
-// // Function that imports a vector of the control input measurements
-// std::vector< MeasControlInput> importMeasControlInput( const std::string &file_path){
-//     // Import the data
-//     auto data_vec = importData( file_path);
-//     std::vector< MeasControlInput> vec_meas_u( data_vec.size());
-//     for( size_t i = 0; i < data_vec.size(); i++){
-//         vec_meas_u[ i] = MeasControlInput( data_vec[ i]);
-//     }
-// }
-
-// Function to parse the control inputs
-template< typename T = double>
-std::vector<T> importControlInput(const std::string &file_path){
-    // file_path is a path to the control input .txt file
-
-    // Import the data
-    auto data_vec = importData( file_path);
-    // From the imported data, import a vector of the control inputs only (ignore the time measurements and variance)
-    std::vector< T> vec_u( data_vec.size());
-    for( size_t i = 0; i < data_vec.size(); i++){
-        // Import the second reading, which is the control input. The first reading is the time value
-        vec_u[ i] = data_vec[ i][1];
-    }
-    return vec_u;
-}
-// Function to parse the control inputs
-template< typename T = double>
-std::vector<T> importControlInput(const int K){
-    // K : Number of poses
-
-    // This implementation of the function simply generates the data
-    std::vector< double> v_u( K - 1);
-    // Set all control inputs to 1
-    for( int i : v_u){
-        v_u[i] = 1.;
-    }
-    return v_u;
-}
-
-
+// Acceleration measurement class
+typedef Measurement< size_u> MeasControlInput;
+typedef Measurement< size_y> MeasGPS;
+typedef Measurement< size_x> PoseEstimate;
 // Control input file name
 const std::string file_name_u = "/home/aalbaali/Documents/Code_base/Examples/Data_generator/linear_system/data/msd_acc.txt";
+
+const std::string file_name_gps = "/home/aalbaali/Documents/Code_base/Examples/Data_generator/linear_system/data/msd_pos.txt";
+
 
 int main(){
 
@@ -179,71 +84,96 @@ int main(){
     std::cout << "sys_B_dt:\n" << sys_B << std::endl;
 #endif
 
-    // Variance on control input
-    double var_u = 1;
-    // Covariances
-    //      Process covariance
-    Eigen::Matrix2d cov_Q;    
-    // cov_Q << 1, 0, 0, 1;
-    cov_Q = sys_L * var_u * sys_L.transpose();
-
     // *********************************************
     // Initial conditions
-    Eigen::Vector2d x_0( 0., 0.);
+    VectorPose x_0( 0., 0.);
     // Covariance on initial condition
-    Eigen::Matrix2d cov_P_0;
+    CovPose cov_P_0;
     cov_P_0 << 1e-3, 0, 0, 1e-3;
 
+
+    // ************************************************
+    // Import control input
+    std::vector< MeasControlInput> meas_control_input = ImportMeasurementsObjectVector<MeasControlInput>( file_name_u);
+    // Lambda function that extractes the sample time (dt)
+    auto dt_func = [&meas_control_input](int k){
+        return meas_control_input[k].time() - meas_control_input[k-1].time();
+    };
+#ifdef DEBUG
+    // Try it out
+    std::cout << "dt_{5}: " << dt_func(5) << std::endl;
+#endif
+
+    // ************************************************
+    // Import GPS measurements
+    std::vector< MeasGPS> meas_gps = ImportMeasurementsObjectVector<MeasGPS>( file_name_gps);
+
     // *********************************************
-    // Simulation inputs
-    //  Number of poses
+    //  Number of poses 
+    // TODO: change it to match the number of control input measurements
     const unsigned int K = 3;
 
     // *********************************************
-    // Control inputs
-    // auto v_u = importControlInput( K);
-    auto v_u = importControlInput( file_name_u);
+    //  Estaimted states
+    std::vector< PoseEstimate> estiamted_states( K);
+    // Set time steps for each state
+    for( int i = 0; i < K - 1; i++){
+        estiamted_states[i].setTime( 
+            meas_control_input[i].time()
+        );
+    }
+    // Set the last estimate time
+    estiamted_states[K  - 1].setTime( estiamted_states[K-2].time() + dt_func(K-2));
+
+    // Set the time from the first time element of the control input measurement
+    estiamted_states[0].setMeas( x_0);
+    estiamted_states[0].setCov(cov_P_0);
     
-//     // *********************************************
-//     //  Estaimted states
-//     std::vector< Eigen::Vector2d> v_x_est( K);
-//     //  Estimated covariance
-//     std::vector< Eigen::Matrix2d> v_cov_P( K);
+    
+    // *********************************************
+    //  Run the Kalman filter
+    //  Estimate and covariance at the previous step
+    VectorPose x_km1;
+    CovPose    P_km1;
+    //  Estimate and covariance at the current step
+    VectorPose x_k;
+    CovPose    P_k;
+    // Control input and covariance at previous time step
+    Eigen::Matrix<double, size_u, 1> u_km1;
+    Eigen::Matrix<double, size_u, size_u> Q_km1;
+    for( int i = 1; i < K; i++){
+        // Get the pose estimate and covariance at the previous step
+        x_km1 = estiamted_states[i - 1].meas();
+        P_km1 = estiamted_states[i - 1].cov();
+        u_km1 = meas_control_input[i - 1].meas();
+        Q_km1 = meas_control_input[i - 1].cov();
+        // Prediction step
+        x_k = process_model( x_km1, u_km1, sys_A, sys_B);
+        P_k = sys_A * P_km1 * sys_A. transpose() + sys_L * Q_km1 * sys_L. transpose();
+        
+        // Ensure symmetry of the covariance
+        P_k = 0.5 * (P_k + P_k.transpose());
 
-//     // Initialize all estimates to zeros.
-//     for( int i = 0; i < K; i++){
-//         v_x_est[ i] << Eigen::Vector2d::Zero();
-//         v_cov_P[ i] << Eigen::Matrix2d::Zero();
-//     }
 
-//     // Set first pose to the initial condition
-//     v_x_est[ 0] = x_0;
-//     v_cov_P[ 0] = cov_P_0;
+        // For now, store estimates
+        estiamted_states[i].setMeas( x_k);
+        estiamted_states[i].setCov(  P_k);
+    }
 
-//     // *********************************************
-//     //  Propagate estiamtes
-//     for( int i = 1; i < K; i++){
-//         // Propagate states
-//         v_x_est[ i] = process_model( v_x_est[ i - 1], v_u[ i - 1], sys_A, sys_B);
-//         // Propaget covariance
-//         v_cov_P[ i] = sys_A * v_cov_P[ i - 1] * sys_A. transpose() + cov_Q;
-//     }
+    // Display estimates
+    std::cout << "\n\n===============================\nEstimates\n" << std::endl;
+    std::cout << "Time\t\tMeas\t\tVar" << std::endl;
+    for( auto meas : estiamted_states){
+        displayRV( meas);
+        std::cout << std::endl;
+    }
 
+// #ifdef DEBUG
 //     // Display propagated states
 //     std::cout << "Propageted states:" << std::endl;
-//     for( auto x : v_x_est){
-//         std::cout << x.transpose() << "\n";
+//     for( auto x : estiamted_states){
+//         std::cout << x.meas().transpose() << "\n";
 //     }
 //     std::cout << std::endl;
-    
-// #ifdef DEBUG
-//     std::cout << "x_K:\n" << v_x_est[K - 1] << std::endl;
 // #endif
-//     // Propagate state
-//     auto x_1 = process_model( x_0, v_u[0], sys_A, sys_B);
-
-// #ifdef DEBUG
-//     std::cout << "x_1:\t" << x_1 << std::endl;
-// #endif
-
 }

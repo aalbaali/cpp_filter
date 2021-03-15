@@ -34,6 +34,16 @@ int main(){
     std::vector< MeasGPS> meas_gps = ImportMeasurementsObjectVector<MeasGPS>( file_name_gps);
 
     // Display measurements
+    std::cout << "\n\n===============================\nControl Input\n" << std::endl;
+    std::cout << "Time\t\tMeas\t\tVar" << std::endl;
+    for( auto meas : meas_control_input){
+    // for( size_t i; i < 10; i++){
+    //     auto meas = meas_control_input[i];
+        std::cout << std::setw(1) << meas.time() << "\t\t";
+        std::cout << std::setw(2) << meas.meas().transpose() << "\t\t";
+        std::cout << std::setw(5) << meas.cov() << std::endl;
+    }
+    std::cout << "\n\n===============================\nGPS Meas\n" << std::endl;
     std::cout << "Time\t\tMeas\t\tVar" << std::endl;
     for( auto meas : meas_gps){
         std::cout << std::setw(1) << meas.time() << "\t\t";

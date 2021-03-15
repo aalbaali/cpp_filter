@@ -8,6 +8,7 @@ namespace Eigen{
 }
 
 // Class of measurements. Contains i) measurement, ii) covariance, and iii) time of the measurement.
+// Change the name of the class to RandomVariable (it just includes the mean, covariance, and time step)
 template<size_t Size, typename T = double>
 class Measurement{
     public:
@@ -40,7 +41,7 @@ class Measurement{
             _t    = time;
             _meas = meas;
             // Ensure symmetry of the covariance matrix
-            _cov  =  cov;
+            _cov  =  0.5 * (cov + cov.transpose());
         }
 
         // Getters
@@ -79,4 +80,14 @@ std::vector< T> ImportMeasurementsObjectVector(const std::string &file_name){
     }
 
     return vector_of_measuremen_objects;
+}
+
+// Function that displays the random variable
+template<typename T>
+void displayRV(T rv){
+    std::cout << std::setw(1) << rv.time() << "\t\t";
+    std::cout << std::setw(5) << rv.meas().transpose() << "\t\t";
+    // Vectorize covariance matrix
+    Eigen::Map<Eigen::RowVectorXd> cov_vec( rv.cov().data(), rv.cov().size());
+    std::cout << std::setw(5) << cov_vec;
 }
