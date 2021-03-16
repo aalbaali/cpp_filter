@@ -3,7 +3,7 @@
 #include <iomanip> // For nice outputs (setw)
 #include <string>  // To definte the file_name for exporting data
 #include <sstream>
-
+#include <tuple>
 
 #include <unsupported/Eigen/MatrixFunctions>
 #include "Eigen/Dense"
@@ -24,71 +24,75 @@ const size_t size_y = 1;
 // Dimension of each pose
 const size_t size_x = 2;
 
+// Eigen matrix types
 typedef Eigen::Matrix< double, size_x, 1>       VectorPose;
 typedef Eigen::Matrix< double, size_x, size_x>  CovPose;
+
+typedef Eigen::Matrix< double, size_x, size_x>  MatrixA;
+typedef Eigen::Matrix< double, size_x, size_x>  MatrixQ;
+typedef Eigen::Matrix< double, size_x, size_u>  MatrixB;
+
 
 // Acceleration measurement class
 typedef Measurement< size_u> MeasControlInput;
 typedef Measurement< size_y> MeasGPS;
 typedef Measurement< size_x> PoseEstimate;
-// Control input file name
-const std::string file_name_u = "/home/aalbaali/Documents/Code_base/Examples/Data_generator/linear_system/data/msd_acc.txt";
 
-const std::string file_name_gps = "/home/aalbaali/Documents/Code_base/Examples/Data_generator/linear_system/data/msd_pos.txt";
+// Returns A, B, Q discrete-time matrices
+template<typename T_L, typename T_Qct>
+std::tuple<MatrixA, MatrixB, MatrixQ> getDiscreteABQ(MatrixA A_ct, MatrixB B_ct, T_L L_ct, T_Qct Q_ct, double dt){
+    // Construct the Xi matrix
+    Eigen::Matrix<double, 3 * size_x + size_u, 3 * size_x + size_u> Xi;
+    Xi.setZero();
+    Xi.block< size_x, size_x>(0, 0)                 =  A_ct;
+    Xi.block< size_x, size_x>(size_x, size_x)         = -A_ct.transpose();
+    Xi.block< size_x, size_x>(2 * size_x, 2 * size_x) =  A_ct;
+    Xi.block< size_x, size_u>(2 * size_x, 3 * size_x) =  B_ct;
+    Xi.block< size_x, size_x>(0, size_x)             =  L_ct * Q_ct * L_ct.transpose();
+
+    // Eigen::Matrix<double, 3 * size_x + size_u, 3 * size_x + size_u>
+    auto
+        Gamma = (dt * Xi).exp();
+    // Extract the blocks
+    MatrixA A_dt = Gamma.block<size_x, size_x> (0, 0);
+    MatrixB B_dt = Gamma.block<size_x, size_u> (2 * size_x, 3 * size_x);
+    auto Gamma_12 = Gamma.block<size_x, size_x>(0, size_x);
+    MatrixQ Q_dt = Gamma_12 * A_dt.transpose();    
+    return std::make_tuple(A_dt, B_dt, Q_dt);
+}
+
+
+
+// Control input file name
+const std::string file_name_u = "/home/aalbaali/Documents/Data/Data_generator/linear_system/msd_acc.txt";
+
+const std::string file_name_gps = "/home/aalbaali/Documents/Data/Data_generator/linear_system/msd_pos.txt";
 
 
 int main(){
-
-    // Declare the discrete-time (DT) system matrices. These are to be computed using a zero-order hold using continous-time (CT) matrices
-    Eigen::Matrix2d sys_A;
-    Eigen::Vector2d sys_B;
-    Eigen::Vector2d sys_L;
-
     // GPS sensor
     Eigen::Matrix<double, size_y, size_x> sys_C;
     sys_C << 1, 0;
     Eigen::Matrix<double, size_y, size_y> sys_M;
     sys_M.setIdentity();
 
-    {
-        // The parameters defined in this scope are only needed to compute the DT matrices. Therefore, they'll be deleted once they leave the scope.
-        // *********************************************
-        // Cotinuous-time (CT) system parameters
-        // Continuous-time system matrix
-        Eigen::Matrix2d sys_A_ct;
-        // Continuous-time control matrix
-        Eigen::Vector2d sys_B_ct;
-        // System is a mass-spring-damper system with unit mass, spring-constant, and damping.
-        sys_A_ct << 0, 1, -1, -1;
-        sys_B_ct << 0, 1;
+    // Define CT matrices
+    // *********************************************
+    // Cotinuous-time (CT) system parameters
+    // Continuous-time system matrix
+    MatrixA sys_A_ct;
+    // Continuous-time control matrix
+    MatrixB sys_B_ct;
+    Eigen::Vector2d sys_L_ct;
+    // System is a mass-spring-damper system with unit mass, spring-constant, and damping.
+    sys_A_ct << 0, 1, -1, -1;
+    sys_B_ct << 0, 1;
+    sys_L_ct = sys_B_ct;
 
-        // *********************************************
-        //  Compute discrete-time (DT) system parameters
-        // The computed matrix is [A, B; 0, 1]
-        Eigen::Matrix<double, 3, 3> mat_AB_I;
-        // Set to identity
-        mat_AB_I.setZero();
-        // Set the two blocks
-        mat_AB_I.block<2, 2>(0, 0) = sys_A_ct;
-        mat_AB_I.block<2, 1>(0, 2) = sys_B_ct;
-
-        // Compute exponential matrix (includes the DT matrices)
-        mat_AB_I = mat_AB_I.exp();    
-
-    #ifdef DEBUG
-        std::cout << "mat_AB_I:\n" << mat_AB_I << std::endl;
-    #endif
-
-        // Extract the associated blocks
-        sys_A = mat_AB_I.block< 2, 2>(0, 0);
-        sys_B = mat_AB_I.block< 2, 1>(0, 2);
-        sys_L = sys_B;
-    }
-
-#ifdef DEBUG
-    std::cout << "sys_A_dt:\n" << sys_A << std::endl;
-    std::cout << "sys_B_dt:\n" << sys_B << std::endl;
-#endif
+// #ifdef DEBUG
+//     std::cout << "sys_A_dt:\n" << sys_A << std::endl;
+//     std::cout << "sys_B_dt:\n" << sys_B << std::endl;
+// #endif
 
     // *********************************************
     // Initial conditions
@@ -147,24 +151,35 @@ int main(){
     CovPose    P_k;
     // Control input and covariance at previous time step
     Eigen::Matrix<double, size_u, 1> u_km1;
-    Eigen::Matrix<double, size_u, size_u> Q_km1;
+    Eigen::Matrix<double, size_u, size_u> Cov_u_km1;
+    // DT process model matrices
+    MatrixA A_km1;
+    MatrixB B_km1;
+    MatrixA Q_km1; // Discrete-time process noise covariance
     // Index that keeps track of the gps measurements
     size_t idx_gps = 0;
-    for( int i = 1; i < K; i++){
+    for( int i = 1; i < K; i++){                
         // Get the pose estimate and covariance at the previous step
         x_km1 = estiamted_states[i - 1].meas();
         P_km1 = estiamted_states[i - 1].cov();
         u_km1 = meas_control_input[i - 1].meas();
-        Q_km1 = meas_control_input[i - 1].cov();
+        Cov_u_km1 = meas_control_input[i - 1].cov();
+
+        // Compute DT process model matrices
+        double dt;
+        if( i < K - 1){
+            dt = dt_func(i);
+        }// Else, use the same dt from the previous iteration.
+        std::tie( A_km1, B_km1, Q_km1) = getDiscreteABQ( sys_A_ct, sys_B_ct, sys_L_ct, Cov_u_km1, dt);
+
         // Prediction step
-        x_k = process_model( x_km1, u_km1, sys_A, sys_B);
-        P_k = sys_A * P_km1 * sys_A. transpose() + sys_L * Q_km1 * sys_L. transpose();
-        
+        x_k = process_model( x_km1, u_km1, A_km1, B_km1);
+        P_k = A_km1 * P_km1 * A_km1. transpose() + Q_km1;
         // Ensure symmetry of the covariance
         P_k = 0.5 * (P_k + P_k.transpose());
 
         // Check for correction
-        if( meas_gps[idx_gps].time() <= estiamted_states[i].time()){
+        if( idx_gps < meas_gps.size() && (meas_gps[idx_gps].time() <= estiamted_states[i].time())){
             // Implement a correction
             auto R_k = meas_gps[idx_gps].cov();
             auto y_k = meas_gps[idx_gps].meas();
@@ -173,8 +188,10 @@ int main(){
             // Ensure symmetry
             S_k = 0.5 * (S_k + S_k.transpose());
             // Compute Kalman gain
+            // Eigen::Matrix<double, size_x, size_y> K_k = 
+            //     (S_k.ldlt().solve(sys_C * P_k)).transpose();
             Eigen::Matrix<double, size_x, size_y> K_k = 
-                (S_k.ldlt().solve(sys_C * P_k)).transpose();
+                (S_k.colPivHouseholderQr().solve(sys_C * P_k)).transpose();
             // Update state estimate (xhat)
             x_k += K_k * (y_k - sys_C * x_k);
             // Update covariance
@@ -201,7 +218,7 @@ int main(){
 
     // ******************************************
     // Exporting data
-    std::string file_name_out = "msd_kf_estimates.txt";
+    std::string file_name_out = "/home/aalbaali/Documents/Data/Data_generator/linear_system/msd_kf_estimates.txt";
     std::cout << "\nExporting estimates to '" << file_name_out << "'" << std::endl;
 
     // Definer header
@@ -214,7 +231,7 @@ int main(){
         ss << "x_" << i+1;
         ss >> header[1 + i];
     }
-    // Third inputs: covariances
+    // Third input: covariances
     for(size_t j = 0; j < size_x; j++){
         for(size_t i = 0; i < size_x; i++){
             std::stringstream ss;
