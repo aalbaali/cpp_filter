@@ -9,9 +9,7 @@
 #include "Eigen/Dense"
 
 // Include parser
-#include "data_parser.h"
-#include "Measurement.h"
-#include "Exporter.h"
+#include "RV.h"
 
 Eigen::VectorXd process_model( Eigen::VectorXd x_km1, Eigen::VectorXd u_km1, Eigen::MatrixXd A, Eigen::MatrixXd B){
     return A * x_km1 + B * u_km1;
@@ -34,9 +32,9 @@ typedef Eigen::Matrix< double, size_x, size_u>  MatrixB;
 
 
 // Acceleration measurement class
-typedef Measurement< size_u> MeasControlInput;
-typedef Measurement< size_y> MeasGPS;
-typedef Measurement< size_x> PoseEstimate;
+typedef RV::RandomVariable< size_u> MeasControlInput;
+typedef RV::RandomVariable< size_y> MeasGPS;
+typedef RV::RandomVariable< size_x> PoseEstimate;
 
 // Returns A, B, Q discrete-time matrices
 template<typename T_L, typename T_Qct>
@@ -104,7 +102,7 @@ int main(){
 
     // ************************************************
     // Import control input
-    std::vector< MeasControlInput> meas_control_input = ImportMeasurementsObjectVector<MeasControlInput>( file_name_u);
+    std::vector< MeasControlInput> meas_control_input = RV::IO::import<MeasControlInput>( file_name_u);
     // Lambda function that extractes the sample time (dt)
     auto dt_func = [&meas_control_input](int k){
         return meas_control_input[k].time() - meas_control_input[k-1].time();
@@ -116,7 +114,7 @@ int main(){
 
     // ************************************************
     // Import GPS measurements
-    std::vector< MeasGPS> meas_gps = ImportMeasurementsObjectVector<MeasGPS>( file_name_gps);
+    std::vector< MeasGPS> meas_gps = RV::IO::import<MeasGPS>( file_name_gps);
 
     // *********************************************
     //  Number of poses 
@@ -137,7 +135,7 @@ int main(){
     estiamted_states[K  - 1].setTime( estiamted_states[K-2].time() + dt_func(K-2));
 
     // Set the time from the first time element of the control input measurement
-    estiamted_states[0].setMeas( x_0);
+    estiamted_states[0].setMean( x_0);
     estiamted_states[0].setCov(cov_P_0);
     
     
@@ -160,9 +158,9 @@ int main(){
     size_t idx_gps = 0;
     for( int i = 1; i < K; i++){                
         // Get the pose estimate and covariance at the previous step
-        x_km1 = estiamted_states[i - 1].meas();
+        x_km1 = estiamted_states[i - 1].mean();
         P_km1 = estiamted_states[i - 1].cov();
-        u_km1 = meas_control_input[i - 1].meas();
+        u_km1 = meas_control_input[i - 1].mean();
         Cov_u_km1 = meas_control_input[i - 1].cov();
 
         // Compute DT process model matrices
@@ -182,7 +180,7 @@ int main(){
         if( idx_gps < meas_gps.size() && (meas_gps[idx_gps].time() <= estiamted_states[i].time())){
             // Implement a correction
             auto R_k = meas_gps[idx_gps].cov();
-            auto y_k = meas_gps[idx_gps].meas();
+            auto y_k = meas_gps[idx_gps].mean();
             // Compute S_k
             Eigen::Matrix< double, size_y, size_y> S_k = sys_C * P_k * sys_C.transpose() + sys_M * R_k * sys_M.transpose();
             // Ensure symmetry
@@ -202,7 +200,7 @@ int main(){
             idx_gps++;
         }
         // For now, store estimates
-        estiamted_states[i].setMeas( x_k);
+        estiamted_states[i].setMean( x_k);
         estiamted_states[i].setCov(  P_k);
     }
 
@@ -210,7 +208,7 @@ int main(){
     std::cout << "\n\n===============================\nEstimates\n" << std::endl;
     std::cout << "Time\t\tMeas\t\tVar" << std::endl;
     for( auto meas : estiamted_states){
-        displayRV( meas);
+        RV::IO::print( meas);
         std::cout << std::endl;
     }
 
@@ -240,5 +238,5 @@ int main(){
         }
     }
 
-    RandomVariable::LogMeasurements( estiamted_states, header, file_name_out);
+    RV::IO::write( estiamted_states, header, file_name_out);
 }

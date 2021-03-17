@@ -10,15 +10,15 @@ namespace Eigen{
 // Class of measurements. Contains i) measurement, ii) covariance, and iii) time of the measurement.
 // Change the name of the class to RandomVariable (it just includes the mean, covariance, and time step)
 template<size_t Size, typename T = double>
-class Measurement{
+class RandomVariable{
     public:
-        Measurement(){
+        RandomVariable(){
             _meas = Eigen::Matrix< T, Size, 1>::Zero();
             _cov  = Eigen::Matrix< T, Size, Size>::Zero();
             _t = -1.0;
         }
 
-        Measurement( Eigen::Matrix< T, Size, 1> meas_in,
+        RandomVariable( Eigen::Matrix< T, Size, 1> meas_in,
             Eigen::Matrix< T, Size, Size> cov_in = Eigen::Matrix< T, Size, Size>::Identity(), double time_in = -1){
             // Constructor that takes measurement and covariance (with default values).
             _meas = meas_in;
@@ -27,7 +27,7 @@ class Measurement{
         }
 
         template<typename VectorT>
-        Measurement( std::vector<VectorT> row_of_raw_data){
+        RandomVariable( std::vector<VectorT> row_of_raw_data){
             double time = row_of_raw_data[ 0];
             Eigen::Vectord< Size> meas;
             Eigen::Matrix< double, Size, Size> cov;

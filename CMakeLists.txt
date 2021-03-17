@@ -7,10 +7,7 @@ find_package(Eigen3 REQUIRED)
 add_executable(${PROJECT_NAME} kalman_filter.cpp)
 # add_executable(${PROJECT_NAME} playground.cpp)
 
-# # Include the parser
-# target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "include/data_generator/cpp_parser/")
-
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "/home/aalbaali/Documents/Code_base/Local/Data_generator/cpp_parser/")
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "/home/aalbaali/Documents/Code_base/Local/RandomVariable/cpp")
 
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIRS})
 
