@@ -7,7 +7,7 @@ find_package(Eigen3 REQUIRED)
 add_executable(${PROJECT_NAME} kalman_filter.cpp)
 # add_executable(${PROJECT_NAME} playground.cpp)
 
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "/home/aalbaali/Documents/Code_base/Local/RandomVariable/cpp")
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "../include/RandomVariable/cpp")
 
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIRS})
 
@@ -23,11 +23,5 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
   message("CMAKE_BUILD_TYPE: Release mode")
 endif()
 
-# Set required C++11 flag
-if(CMAKE_VERSION VERSION_LESS "3.1")
-  set_target_properties(${CXX_11_EXAMPLE_TARGETS} PROPERTIES COMPILE_FLAGS "-std=c++11")
-else()
-  set_property(TARGET ${CXX_11_EXAMPLE_TARGETS} PROPERTY CXX_STANDARD 11)
-  set_property(TARGET ${CXX_11_EXAMPLE_TARGETS} PROPERTY CXX_STANDARD_REQUIRED ON)
-  set_property(TARGET ${CXX_11_EXAMPLE_TARGETS} PROPERTY CXX_EXTENSIONS OFF)
-endif()
+# Set required C++ standard flag
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
