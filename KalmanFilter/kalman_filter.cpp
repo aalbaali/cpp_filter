@@ -5,7 +5,7 @@
 #include <sstream>
 #include <tuple>
 
-#include <unsupported/Eigen/MatrixFunctions>
+#include <unsupported/Eigen/MatrixFunctions> // To use the exponential function
 #include "Eigen/Dense"
 
 // Include parser
