@@ -7,7 +7,7 @@ find_package(Eigen3 REQUIRED)
 add_executable(${PROJECT_NAME} kalman_filter.cpp)
 # add_executable(${PROJECT_NAME} playground.cpp)
 
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "../include/RandomVariable/cpp")
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "../include/RandomVariable/src/")
 
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIRS})
 

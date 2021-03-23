@@ -5,3 +5,5 @@ build/
 doc/*
 !doc/*.tex
 !doc/*.pdf
+
+*TODO.txt
