@@ -15,12 +15,12 @@ const size_t dof_x = 3;
 // Embedded dimension (SE(2) -> robot lives in 2D)
 const size_t dim_x = 2;
 const size_t dof_gyro = 1;  // DOF of gyro measurement
-const size_t dof_vel  = 1;  // DOF of velocity measurement
+const size_t dof_vel  = 2;  // DOF of velocity measurement
 const size_t dof_gps  = 2;  // DOF of GPS measurement
 
 // Random variables
 typedef RV::RandomVariable< dof_gyro> MeasGyro;
-typedef RV::RandomVariable< dof_gyro> MeasVel;
+typedef RV::RandomVariable< dof_vel> MeasVel;
 typedef RV::RandomVariable< dof_gps > MeasGps;
 
 // Lie Group classes
