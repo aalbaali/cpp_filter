@@ -1,12 +1,3 @@
-#include <iostream>
-#include <string>
-#include <vector>
-
-#include "Eigen/Dense"
-
-// My custom RandomVariable class
-#include "RV.h"
-
 #include "config.h"
 
 int main(){
@@ -17,4 +8,7 @@ int main(){
     std::vector< MeasVel> meas_vel   = RV::IO::import< MeasVel>( filename_vel);
     //  GPS
     std::vector< MeasGps> meas_gps   = RV::IO::import< MeasGps>( filename_gps);
+    
+    // Declare a pose
+    Pose X0( 0, 0, 0);
 }
