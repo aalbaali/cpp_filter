@@ -11,7 +11,7 @@ int main(){
     
     // Number of poses
     const unsigned int num_poses = meas_gyro.size() + 1;
-    // Lambda function that extractes the sample time (dt)
+    // Lambda function that extracts the sample time (dt)
     auto dt_func = [&meas_gyro](int k){
         return meas_gyro[k].time() - meas_gyro[k-1].time();
     };
@@ -46,4 +46,11 @@ int main(){
     for( auto Xk : Xhat){
         std::cout << Xk.transform() << std::endl;
     }
+
+    // // Export Xhat to a RandomVariable object (temporary solution)
+    std::vector< PoseEstimate> estimated_states_rv( num_poses);
+    for( size_t i = 0; i < num_poses; ++i){
+        estimated_states_rv[i] = PoseEstimate( Xhat[i].transform());
+    }
+    RV::IO::write( estimated_states_rv, filename_out, "X");
 }

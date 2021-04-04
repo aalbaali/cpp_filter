@@ -8,6 +8,7 @@
 
 // My custom RandomVariable class
 #include "RV.h"
+#include "RVIO.h"
 
 
 // Degrees of freedom of pose (SE(2))
@@ -19,9 +20,10 @@ const size_t dof_vel  = 2;  // DOF of velocity measurement
 const size_t dof_gps  = 2;  // DOF of GPS measurement
 
 // Random variables
-typedef RV::RandomVariable< dof_gyro> MeasGyro;
-typedef RV::RandomVariable< dof_vel > MeasVel;
-typedef RV::RandomVariable< dof_gps > MeasGps;
+typedef RandomVariable< dof_gyro> MeasGyro;
+typedef RandomVariable< dof_vel > MeasVel;
+typedef RandomVariable< dof_gps > MeasGps;
+typedef RandomVariable< 3, 3, dof_x> PoseEstimate;
 
 // Lie Group classes
 typedef manif::SE2d         Pose;       // Pose variable
@@ -36,3 +38,5 @@ const std::string filename_gyro = "/home/aa/Documents/Data/Data_generator/SE2/me
 const std::string filename_vel  = "/home/aa/Documents/Data/Data_generator/SE2/meas_vel.txt";
 //  GPS
 const std::string filename_gps  = "/home/aa/Documents/Data/Data_generator/SE2/meas_gps.txt";
+// Estimated states
+const std::string filename_out  = "/home/aa/Documents/Data/Data_generator/SE2/est_xhat.txt";
