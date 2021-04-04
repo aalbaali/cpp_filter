@@ -10,6 +10,8 @@
 
 // Include parser
 #include "RV.h"
+#include "RVIO.h"
+
 
 Eigen::VectorXd process_model( Eigen::VectorXd x_km1, Eigen::VectorXd u_km1, Eigen::MatrixXd A, Eigen::MatrixXd B){
     return A * x_km1 + B * u_km1;
@@ -32,9 +34,9 @@ typedef Eigen::Matrix< double, size_x, size_u>  MatrixB;
 
 
 // Acceleration measurement class
-typedef RV::RandomVariable< size_u> MeasControlInput;
-typedef RV::RandomVariable< size_y> MeasGPS;
-typedef RV::RandomVariable< size_x> PoseEstimate;
+typedef RandomVariable< size_u> MeasControlInput;
+typedef RandomVariable< size_y> MeasGPS;
+typedef RandomVariable< size_x> PoseEstimate;
 
 // Returns A, B, Q discrete-time matrices
 template<typename T_L, typename T_Qct>
@@ -62,9 +64,9 @@ std::tuple<MatrixA, MatrixB, MatrixQ> getDiscreteABQ(MatrixA A_ct, MatrixB B_ct,
 
 
 // Control input file name
-const std::string file_name_u = "/home/aalbaali/Documents/Data/Data_generator/linear_system/msd_acc.txt";
+const std::string file_name_u = "/home/aa/Documents/Data/Data_generator/linear_system/msd_acc.txt";
 
-const std::string file_name_gps = "/home/aalbaali/Documents/Data/Data_generator/linear_system/msd_pos.txt";
+const std::string file_name_gps = "/home/aa/Documents/Data/Data_generator/linear_system/msd_pos.txt";
 
 
 int main(){
@@ -87,11 +89,6 @@ int main(){
     sys_B_ct << 0, 1;
     sys_L_ct = sys_B_ct;
 
-// #ifdef DEBUG
-//     std::cout << "sys_A_dt:\n" << sys_A << std::endl;
-//     std::cout << "sys_B_dt:\n" << sys_B << std::endl;
-// #endif
-
     // *********************************************
     // Initial conditions
     VectorPose x_0( 0., 0.);
@@ -103,6 +100,11 @@ int main(){
     // ************************************************
     // Import control input
     std::vector< MeasControlInput> meas_control_input = RV::IO::import<MeasControlInput>( file_name_u);
+#ifdef DEBUG
+    for( auto i : meas_control_input){
+        std::cout << i.time() << "\t" << i.mean() << "\t" << i.cov().transpose() << std::endl;
+    }
+#endif
     // Lambda function that extractes the sample time (dt)
     auto dt_func = [&meas_control_input](int k){
         return meas_control_input[k].time() - meas_control_input[k-1].time();
@@ -208,35 +210,17 @@ int main(){
     std::cout << "\n\n===============================\nEstimates\n" << std::endl;
     std::cout << "Time\t\tMeas\t\tVar" << std::endl;
     for( auto meas : estiamted_states){
-        RV::IO::print( meas);
-        std::cout << std::endl;
+        // RV::IO::print( meas);
+        std::cout << meas.mean().transpose() << std::endl;
+        // std::cout << std::endl;
     }
 
     
 
     // ******************************************
     // Exporting data
-    std::string file_name_out = "/home/aalbaali/Documents/Data/Data_generator/linear_system/msd_kf_estimates.txt";
+    std::string file_name_out = "/home/aa/Documents/Data/Data_generator/linear_system/msd_kf_estimates.txt";
     std::cout << "\nExporting estimates to '" << file_name_out << "'" << std::endl;
 
-    // Definer header
-    std::vector<std::string> header( size_x * (size_x + 1) + 1);
-    // First entry: time
-    header[0] = "Time";
-    // Second inputs: states
-    for(size_t i = 0; i < size_x; i++){
-        std::stringstream ss;
-        ss << "x_" << i+1;
-        ss >> header[1 + i];
-    }
-    // Third input: covariances
-    for(size_t j = 0; j < size_x; j++){
-        for(size_t i = 0; i < size_x; i++){
-            std::stringstream ss;
-            ss << "cov_" << (i+1) << (j+1);
-            ss >> header[1 + size_x + size_x * j + i];
-        }
-    }
-
-    RV::IO::write( estiamted_states, header, file_name_out);
+    RV::IO::write( estiamted_states, file_name_out, "x");
 }

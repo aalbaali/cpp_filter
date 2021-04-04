@@ -20,7 +20,7 @@ const size_t dof_gps  = 2;  // DOF of GPS measurement
 
 // Random variables
 typedef RV::RandomVariable< dof_gyro> MeasGyro;
-typedef RV::RandomVariable< dof_vel> MeasVel;
+typedef RV::RandomVariable< dof_vel > MeasVel;
 typedef RV::RandomVariable< dof_gps > MeasGps;
 
 // Lie Group classes
