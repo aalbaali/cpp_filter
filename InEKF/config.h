@@ -32,6 +32,8 @@ typedef manif::SE2Tangentd  LieAlg;     // Tangent vectors
 
 
 // Filenames
+//  Prior
+const std::string filename_prior = "/home/aa/Documents/Data/Data_generator/SE2/meas_prior.txt";
 //  Gyro
 const std::string filename_gyro = "/home/aa/Documents/Data/Data_generator/SE2/meas_gyro.txt";
 //  Velocity
