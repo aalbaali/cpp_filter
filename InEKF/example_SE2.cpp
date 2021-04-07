@@ -42,8 +42,13 @@ int main(){
     // Set initial estimate
     X_hat[0] = meas_prior;
     
-    // Dead-reckoning
+    // Index that keeps track of the gps measurements
+    size_t idx_gps = 0;
+    // Filtering
     for( size_t k = 1; k < K; k++){
+        // Store time steps
+        X_hat[k].setTime( meas_vel[k-1].time());
+
         // Interoceptive measurements at k - 1
         //  Velocity
         auto u_v_km1 = meas_vel[k-1].mean();
@@ -74,21 +79,46 @@ int main(){
         JacF_wkm1 J_F_wkm1;
 
         // Motion/process model. Get the Jacobians as well
-        Pose Xk = Xkm1.plus( u_km1, J_F_xkm1, J_F_wkm1);
+        Pose X_k = Xkm1.plus( u_km1, J_F_xkm1, J_F_wkm1);
         
         // Compute covariance on X_k
-        CovPose Cov_Xk =   J_F_xkm1 * Cov_Xkm1 * J_F_xkm1.transpose() + 
+        CovPose P_k =   J_F_xkm1 * Cov_Xkm1 * J_F_xkm1.transpose() + 
                         J_F_wkm1 * Q_km1    * J_F_wkm1.transpose();
         
+        // Correction
+        if( idx_gps < meas_gps.size() && (meas_gps[idx_gps].time() <= X_hat[k].time())){
+            // Implement a correction
+            auto R_k = meas_gps[idx_gps].cov();
+            auto y_k = meas_gps[idx_gps].mean();
+            // Jacobian of measurement function w.r.t. state
+            JacYgps_Xk H_k;
+            // Predicted measurement
+            auto b = Eigen::Vector2d(0,0);
+            auto y_check_k = X_k.act(b, H_k);
+            // Compute S_k
+            JacYgps_nk S_k = H_k * P_k * H_k.transpose() + R_k;
+            // Ensure symmetry
+            S_k = 0.5 * (S_k + S_k.transpose());
+            // Compute Kalman gain
+            // Eigen::Matrix<double, dof_x, dof_gps> K_k = 
+            //     (S_k.ldlt().solve(H_k * P_k)).transpose();
+            Eigen::Matrix<double, dof_x, dof_gps> K_k = 
+                (S_k.colPivHouseholderQr().solve(H_k * P_k)).transpose();
+            // Update state estimate (xhat)
+            X_k += LieAlg( K_k * (y_k - y_check_k));
+            // Update covariance
+            P_k = ((CovPose::Identity()) - K_k * H_k) * P_k;
+            // Ensure symmetry
+            P_k = 0.5 * (P_k + P_k.transpose());
+
+            idx_gps++;
+        }
+
         // Store estimates
-        X_hat[k].setMean( Xk.transform());
-        X_hat[k].setCov( Cov_Xk);
+        X_hat[k].setMean( X_k.transform());
+        X_hat[k].setCov( P_k);
         X_hat[k].setCovIsGlobal( false);
-
-        // Store time steps
-        X_hat[k].setTime( meas_vel[k-1].time());
     }
-
     
     RV::IO::write( X_hat, filename_out, "X");
 }
