@@ -1,0 +1,3 @@
+[submodule "include/RandomVariable"]
+	path = include/RandomVariable
+	url = git@github.com:aalbaa/RandomVariable.git

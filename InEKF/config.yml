@@ -1,0 +1,8 @@
+filename_prior  : "/home/aa/Documents/Data/Data_generator/SE2/meas_prior.txt"
+filename_gyro   : "/home/aa/Documents/Data/Data_generator/SE2/meas_gyro.txt"
+# Velocity measurements
+filename_vel    : "/home/aa/Documents/Data/Data_generator/SE2/meas_vel.txt"
+# GPS measurements
+filename_gps    : "/home/aa/Documents/Data/Data_generator/SE2/meas_gps.txt"
+# Output file
+filename_out    : "/home/aa/Documents/Data/Data_generator/SE2/est_xhat.txt"
