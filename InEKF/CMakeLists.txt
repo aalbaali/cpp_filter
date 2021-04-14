@@ -11,6 +11,8 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "../include/RandomVaria
 
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIRS})
 
+target_link_libraries(${PROJECT_NAME} yaml-cpp)
+
 # # Add manif include directories to the target
 # target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${manif_INCLUDE_DIRS})
 

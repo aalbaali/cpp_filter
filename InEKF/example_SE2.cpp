@@ -1,6 +1,31 @@
 #include "config.h"
 
-int main(){
+int main(int argc, const char* argv[]){
+    // Configurations
+    YAML::Node config;
+    if(argc > 1){
+        std::string filename_config = argv[1];
+        std::cout << argc << " arguments passed: " << filename_config << std::endl;
+        config = YAML::LoadFile( filename_config);
+    }else{
+        // read yaml file with config settings
+        std::string filename_config = "../config";
+        std::cout << "Reading .yml configuration from '" << filename_config << "'" << std::endl;        
+        config = YAML::LoadFile( filename_config);
+    }    
+
+    // Prior
+    const std::string filename_prior = config["filename_prior"].as<std::string>();
+    //  Gyro
+    const std::string filename_gyro  = config["filename_gyro"].as<std::string>();
+    //  Velocity
+    const std::string filename_vel   = config["filename_vel"].as<std::string>();
+    //  GPS
+    const std::string filename_gps   = config["filename_gps"].as<std::string>();
+    // Estimated states
+    const std::string filename_out   = config["filename_out"].as<std::string>();
+    // If there's an argument, then read the YAML configuration file from input. Otherwise, use default directory
+
     // Import data
     //  Prior
     PoseEstimate meas_prior = RV::IO::import< PoseEstimate>( filename_prior)[0];
@@ -74,9 +99,6 @@ int main(){
         // (LI) Jacobian w.r.t. process noise (w_km1)
         JacF_wkm1 J_F_wkm1 = -dt_km1 * JacF_wkm1::Identity();
 
-        // // Motion/process model. Get the Jacobians as well (right-perturbation Jacobians)
-        // Pose X_k = Xkm1.plus( u_km1, J_F_xkm1, J_F_wkm1);
-        
         // Compute covariance on X_k
         CovPose P_k =   J_F_xkm1 * Cov_Xkm1 * J_F_xkm1.transpose() + 
                         J_F_wkm1 * Q_km1    * J_F_wkm1.transpose();
@@ -88,23 +110,16 @@ int main(){
             auto y_k = meas_gps[idx_gps].mean();
             // Jacobian of measurement function w.r.t. state
             JacYgps_Xk H_k;
-            // Predicted measurement
-            // auto b = Eigen::Vector2d(0,0);
-            // auto y_check_k = X_k.act(b);
-            auto y_check_k = X_k.translation();
-            
+            // Jacobian of innovation w.r.t. measurement noise
+            Eigen::Matrix2d M_k = X_k.rotation().transpose();
             H_k.topLeftCorner< 2, 2>() = - Eigen::Matrix2d::Identity();
             H_k.topRightCorner< 2, 1>().setZero();
-            // Innovation
-            // //      Jacobian of innovation w.r.t. state
-            // Eigen::Matrix<double, dof_x, dof_x> Jac_z_Xinv;
-            auto z = X_k.rotation().transpose() * (y_k - y_check_k);
-            // auto z = y_k - y_check_k;
-            // Update the Jacobian of innovation w.r.t. X
+
+            // Predicted measurement            
+            auto y_check_k = X_k.translation();
             
-            Eigen::Matrix2d M_k = X_k.rotation().transpose();
-            // Eigen::Matrix2d M_k; 
-            // M_k.setIdentity();
+            // Innovation
+            auto z = X_k.rotation().transpose() * (y_k - y_check_k);
 
             // Compute S_k
             JacYgps_nk S_k = H_k * P_k * H_k.transpose() + 
@@ -114,8 +129,7 @@ int main(){
             S_k = 0.5 * (S_k + S_k.transpose());
             // Compute Kalman gain
             Eigen::Matrix<double, dof_x, dof_gps> K_k = P_k * H_k.transpose() * S_k.inverse();
-            // Eigen::Matrix<double, dof_x, dof_gps> K_k = 
-            //     (S_k.colPivHouseholderQr().solve(H_k * P_k)).transpose();
+
             // Update state estimate (xhat) using a LI error
             X_k = X_k + (LieAlg( - K_k * z));
             // Update covariance

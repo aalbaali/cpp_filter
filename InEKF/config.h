@@ -2,9 +2,14 @@
 #include <string>
 #include <vector>
 
+// Eigen
 #include "Eigen/Dense"
 
+// Manif
 #include "manif/SE2.h"
+
+// YAML C++
+#include "yaml-cpp/yaml.h"
 
 // My custom RandomVariable class
 #include "RV.h"
@@ -46,15 +51,3 @@ typedef Eigen::Matrix< double, dof_gyro + dof_vel, dof_gyro + dof_vel> CovQ;
 typedef Eigen::Matrix< double, dof_gps, dof_x>          JacYgps_Xk;
 //  Jacobian w.r.t. measurement noise 
 typedef Eigen::Matrix< double, dof_gps, dof_gps>        JacYgps_nk;
-
-// Filenames
-//  Prior
-const std::string filename_prior = "/home/aa/Documents/Data/Data_generator/SE2/meas_prior.txt";
-//  Gyro
-const std::string filename_gyro = "/home/aa/Documents/Data/Data_generator/SE2/meas_gyro.txt";
-//  Velocity
-const std::string filename_vel  = "/home/aa/Documents/Data/Data_generator/SE2/meas_vel.txt";
-//  GPS
-const std::string filename_gps  = "/home/aa/Documents/Data/Data_generator/SE2/meas_gps.txt";
-// Estimated states
-const std::string filename_out  = "/home/aa/Documents/Data/Data_generator/SE2/est_xhat.txt";
