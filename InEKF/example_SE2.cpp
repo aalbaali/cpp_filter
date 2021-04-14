@@ -1,12 +1,5 @@
 #include "config.h"
 
-// // Process model function
-// Pose process_model( Pose X_km1, LieAlg u_km1, double dt){
-//     return X_km1 + (dt * u_km1);
-// }
-// // Jacobian
-
-
 int main(){
     // Import data
     //  Prior
@@ -56,11 +49,11 @@ int main(){
         auto u_g_km1   = meas_gyro[k-1].mean();
         // Get the tangent coordinates (twist)
         double dt_km1 = dt_func( k);        
-        manif::SE2Tangentd u_km1(
+        LieAlg u_km1(
                 dt_km1 * u_v_km1[0], 
                 dt_km1 * u_v_km1[1], 
                 dt_km1 * u_g_km1[0]
-        );
+                );
         // Covariance on process noise
         CovQ Q_km1 = CovQ::Zero();
         Q_km1.block<2, 2>(0,0) = meas_vel[k-1].cov();
@@ -73,13 +66,16 @@ int main(){
 
         // Set pose at previous estimate
         Pose Xkm1( Xkm1_mat(0, 2), Xkm1_mat(1, 2), Xkm1_mat(0, 0), Xkm1_mat(1, 0));
-        // Jacobian w.r.t. state
-        JacF_Xkm1 J_F_xkm1;
-        // Jacobian w.r.t. process noise (w_km1)
-        JacF_wkm1 J_F_wkm1;
 
-        // Motion/process model. Get the Jacobians as well
-        Pose X_k = Xkm1.plus( u_km1, J_F_xkm1, J_F_wkm1);
+        // Predict
+        Pose X_k = Xkm1.plus( u_km1);
+        // (LI) Jacobian w.r.t. state
+        JacF_Xkm1 J_F_xkm1 = (-u_km1).exp().adj();
+        // (LI) Jacobian w.r.t. process noise (w_km1)
+        JacF_wkm1 J_F_wkm1 = -dt_km1 * JacF_wkm1::Identity();
+
+        // // Motion/process model. Get the Jacobians as well (right-perturbation Jacobians)
+        // Pose X_k = Xkm1.plus( u_km1, J_F_xkm1, J_F_wkm1);
         
         // Compute covariance on X_k
         CovPose P_k =   J_F_xkm1 * Cov_Xkm1 * J_F_xkm1.transpose() + 
@@ -93,21 +89,39 @@ int main(){
             // Jacobian of measurement function w.r.t. state
             JacYgps_Xk H_k;
             // Predicted measurement
-            auto b = Eigen::Vector2d(0,0);
-            auto y_check_k = X_k.act(b, H_k);
+            // auto b = Eigen::Vector2d(0,0);
+            // auto y_check_k = X_k.act(b);
+            auto y_check_k = X_k.translation();
+            
+            H_k.topLeftCorner< 2, 2>() = - Eigen::Matrix2d::Identity();
+            H_k.topRightCorner< 2, 1>().setZero();
+            // Innovation
+            // //      Jacobian of innovation w.r.t. state
+            // Eigen::Matrix<double, dof_x, dof_x> Jac_z_Xinv;
+            auto z = X_k.rotation().transpose() * (y_k - y_check_k);
+            // auto z = y_k - y_check_k;
+            // Update the Jacobian of innovation w.r.t. X
+            
+            Eigen::Matrix2d M_k = X_k.rotation().transpose();
+            // Eigen::Matrix2d M_k; 
+            // M_k.setIdentity();
+
             // Compute S_k
-            JacYgps_nk S_k = H_k * P_k * H_k.transpose() + R_k;
+            JacYgps_nk S_k = H_k * P_k * H_k.transpose() + 
+                             M_k * R_k * M_k.transpose();
+
             // Ensure symmetry
             S_k = 0.5 * (S_k + S_k.transpose());
             // Compute Kalman gain
+            Eigen::Matrix<double, dof_x, dof_gps> K_k = P_k * H_k.transpose() * S_k.inverse();
             // Eigen::Matrix<double, dof_x, dof_gps> K_k = 
-            //     (S_k.ldlt().solve(H_k * P_k)).transpose();
-            Eigen::Matrix<double, dof_x, dof_gps> K_k = 
-                (S_k.colPivHouseholderQr().solve(H_k * P_k)).transpose();
-            // Update state estimate (xhat)
-            X_k += LieAlg( K_k * (y_k - y_check_k));
+            //     (S_k.colPivHouseholderQr().solve(H_k * P_k)).transpose();
+            // Update state estimate (xhat) using a LI error
+            X_k = X_k + (LieAlg( - K_k * z));
             // Update covariance
-            P_k = ((CovPose::Identity()) - K_k * H_k) * P_k;
+            P_k = ((CovPose::Identity()) - K_k * H_k) * P_k 
+                    * ((CovPose::Identity()) - K_k * H_k).transpose() + 
+                    K_k * M_k * R_k * M_k.transpose() * K_k.transpose();
             // Ensure symmetry
             P_k = 0.5 * (P_k + P_k.transpose());
 
@@ -119,6 +133,6 @@ int main(){
         X_hat[k].setCov( P_k);
         X_hat[k].setCovIsGlobal( false);
     }
-    
+
     RV::IO::write( X_hat, filename_out, "X");
 }
