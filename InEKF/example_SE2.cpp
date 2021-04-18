@@ -23,7 +23,7 @@ int main(int argc, const char* argv[]){
     //  GPS
     const std::string filename_gps   = config["filename_gps"].as<std::string>();
     // Estimated states
-    const std::string filename_out   = config["filename_out"].as<std::string>();
+    const std::string filename_out       std::string= config["filename_out"].as<std::string>();
     // If there's an argument, then read the YAML configuration file from input. Otherwise, use default directory
 
     // Import data

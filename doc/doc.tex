@@ -1,13 +1,22 @@
 \documentclass[nobib]{tufte-handout}
-\usepackage{amro-tufte}
 \usepackage{amro-common}
+\usepackage{amro-tufte}
 
 \newcommand{\cpp}{C\texttt{++}}
 
 
-% This command is needed for buildilng in linux
-\captionsetup{compatibility=false}
+% % This command is needed for building in linux
+% \captionsetup{compatibility=false}
 
+\newcommand{\lplus}{\overset{{\scriptscriptstyle\mathrm{L}}}{\oplus}}
+\newcommand{\liplus}{\overset{{\scriptscriptstyle\mathrm{LI}}}{\oplus}}
+\newcommand{\rplus}{\overset{{\scriptscriptstyle\mathrm{R}}}{\oplus}}
+\newcommand{\riplus}{\overset{{\scriptscriptstyle\mathrm{RI}}}{\oplus}}
+% Ominus
+\newcommand{\lminus}{\overset{{\scriptscriptstyle\mathrm{L}}}{\ominus}}
+\newcommand{\liminus}{\overset{{\scriptscriptstyle\mathrm{LI}}}{\ominus}}
+\newcommand{\rminus}{\overset{{\scriptscriptstyle\mathrm{R}}}{\ominus}}
+\newcommand{\riminus}{\overset{{\scriptscriptstyle\mathrm{RI}}}{\ominus}}
 
 
 
@@ -19,14 +28,22 @@
 \makeindex
 
 \begin{document}
-    \maketitle
+    % \frontmatter
+    {    
+        \input{titlepage.tex}
+        % \forceheader{Contents}
+        \tableofcontents
+        \clearpage
+        % \thispagestyle{empty}
+        % \addtocontents{toc}{\protect\thispagestyle{empty}}
+    }
+    % \mainmatter
 
     \section{Why this document?}
     This document is provided to explain and clarify the code uploaded with it. The repository includes examples of implementing filters, usually Kalman fitlers, in \cpp. The filters will be mainly implemented on 
     \begin{enumerate}
-        \item a linear system,
-        \item a nonlinear Euclidean system, and
-        \item a non-Euclidean nonlinear system (usually defined by a Lie group).
+        \item a linear system, and
+        \item a non-Euclidean nonlinear system (usually defined on a Lie group).
     \end{enumerate}
 
     \section{The Kalman filter}
@@ -57,7 +74,7 @@
         \mbf{A} &= \exp\left( \boldsymbol{A} T_{k} \right),\\
         \mbf{B} &= \int_{0}^{T_{k}}\exp(\boldsymbol{A}\alpha)\dee\alpha \boldsymbol{B},
     \end{align}
-    where $T_{k}$ is the sampling period.
+    where $T_{k}$ is the sampling period \cite{Farrell_Aided_2008}.
      
     The matrix $\mbf{B}$ can be approximated using forward Euler to get
     \begin{align}
@@ -84,4 +101,142 @@
         y_{k} &= \bbm 1 & 0 \ebm\mbf{x}_{k} + n_{k}\\
         &= \mbf{C}\mbf{x}_{k} + n_{k}.
     \end{align}
+
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % EKF
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \section{The extended Kalman filter}
+    Without getting into the derivation of the equations, the (extended) Kalman filter equations are given by \cite[eq.~(4.32)]{Barfoot_State_2017a}
+    \begin{subequations}    
+        \label{eq:EKF eqns}
+        \begin{align}
+            \label{eq:EKF: prediction}
+            \mbfcheck{x}_{k} &= \mbf{f}\left( \mbfhat{x}_{k-1}, \mbf{u}_{k-1}, \mbf{0} \right), \\
+            \label{eq:EKF: prediction cov}
+            \mbfcheck{P}_{k} &= \mbf{A}_{k-1}\mbfhat{P}_{k-1}\mbf{A}_{k-1}^{\trans} + \mbf{L}_{k-1}\mbf{Q}_{k}\mbf{L}_{k-1}^{\trans},\\
+            \label{eq:EKF: KF gain}
+            \mbf{K}_{k} &= \mbfcheck{P}_{k}\mbf{H}_{k}\left( \mbf{H}_{k}\mbfcheck{P}_{k}\mbf{H}_{k}^{\trans} + \mbf{M}_{k}\mbf{R}_{k}\mbf{M}_{k}^{\trans} \right)\inv,\\
+            \label{eq:EKF: correction}
+            \mbfhat{x}_{k} &= \mbfcheck{x}_{k} + \mbf{K}_{k}\left( \mbf{y}_{k} + \mbf{g}_{k}\left( \mbfcheck{x}_{k}, \mbf{0} \right) \right),\\
+            \label{eq:EKF: correction cov}
+            \mbfhat{P}_{k} &= \left( \eye - \mbf{K}_{k}\mbf{H}_{k} \right)\mbfcheck{P}_{k}\left( \eye - \mbf{K}_{k}\mbf{H}_{k} \right)^{\trans} \nonumber\\&\qquad+ \mbf{K}_{k}\mbf{M}_{k}\mbf{R}_{k}\mbf{M}_{k}^{\trans}\mbf{K}_{k}^{\trans},
+        \end{align}
+    \end{subequations}
+    where 
+    \begin{align}
+        \mbf{A}_{k-1} &= \left.\pd{\mbf{f}\left( \mbf{x}_{k-1}, \mbf{u}_{k-1}, \mbf{w}_{k-1} \right)}{\mbf{x}_{k-1}}\right|_{\overset{\mbf{x}_{k-1}=\mbfhat{x}_{k-1},}{\mbf{w}_{k-1}=\mbf{0}}},\\
+        \mbf{L}_{k-1} &= \left.\pd{\mbf{f}\left( \mbf{x}_{k-1}, \mbf{u}_{k-1}, \mbf{w}_{k-1} \right)}{\mbf{w}_{k-1}}\right|_{\overset{\mbf{x}_{k-1}=\mbfhat{x}_{k-1},}{\mbf{w}_{k-1}=\mbf{0}}},\\
+        \mbf{H}_{k-1} &= \left.\pd{\mbf{g}\left( \mbf{x}_{k}, \mbf{n}_{k} \right)}{\mbf{x}_{k}}\right|_{\overset{\mbf{x}_{k}=\mbfcheck{x}_{k},}{\mbf{n}_{k}=\mbf{0}}},\\
+        \mbf{M}_{k-1} &= \left.\pd{\mbf{g}\left( \mbf{x}_{k}, \mbf{n}_{k} \right)}{\mbf{n}_{k}}\right|_{\overset{\mbf{x}_{k}=\mbfcheck{x}_{k},}{\mbf{n}_{k}=\mbf{0}}}.
+    \end{align}
+
+    The covariance equations \eqref{eq:EKF: prediction cov} and \eqref{eq:EKF: correction cov} are computed using first-order covariance propagation on \eqref{eq:EKF: prediction} and \eqref{eq:EKF: correction}, respectively. Let's clarify this point as it will be important when discussing the invariant extended Kalman filter.
+
+    \begin{remark}    
+        \label{remark:splitting gaussian rv into sum}
+        A Gaussian random variable 
+        \begin{align}
+            \mbfrv{x}\sim\mc{N}\left( \mbs{\mu}, \mbs{\Sigma} \right)
+        \end{align}
+        can be written as
+        \begin{align}
+            \mbfrv{x} &= \mbs{\mu} + \delta\mbfrv{x},\\
+            \delta\mbfrv{x} &\sim \mc{N}\left( \mbf{0}, \mbs{\Sigma} \right).
+        \end{align}
+    \end{remark}
+    Using Remark~\ref{remark:splitting gaussian rv into sum}, define the (random) variables
+    \begin{align}
+        \delta\mbfcheckrv{x}_{k} &\coloneqq \mbfcheckrv{x}_{k} -  \mbf{x}_{k},\\
+        \delta\mbfhatrv{x}_{k} &\coloneqq \mbfhatrv{x}_{k} -  \mbf{x}_{k},
+    \end{align}
+    where
+    \begin{align}
+        \delta\mbfcheckrv{x}_{k} &\sim\mc{N}\left( \mbf{0}, \mbfcheck{P}_{k} \right),\\
+        \delta\mbfhatrv{x}_{k} &\sim\mc{N}\left( \mbf{0}, \mbfhat{P}_{k} \right).
+    \end{align}
+    Using Taylor's expansion of \eqref{eq:EKF: prediction}, the error dynamics of the (extended) Kalman filter equations are then given by
+    \begin{align}
+        \delta\mbfcheckrv{x}_{k} 
+        &= \mbfcheckrv{x}_{k} - \mbf{x}_{k} \\
+        &= \mbf{f}\left( \mbfhatrv{x}_{k-1}, \mbf{u}_{k-1}, \mbf{0} \right) - \mbf{f}\left( \mbf{x}_{k-1}, \mbf{u}_{k-1}, \mbfrv{w}_{k-1} \right)\\
+        &\approx \mbf{f}\left( \mbfhat{x}_{k-1}, \mbf{u}_{k-1}, \mbf{0} \right) - \mbf{f}\left( \mbfhat{x}_{k-1},\mbf{u}_{k-1}, \mbf{0} \right) 
+            \nonumber\\&\qquad
+            - \mbf{A}_{k-1}\underbrace{\left( \mbf{x}_{k-1} - \mbfhatrv{x}_{k-1} \right)}_{-\delta\mbfhatrv{x}_{k-1}} - \mbf{L}_{k-1}\left( \mbfrv{w}_{k-1} - \mbf{0} \right)\\
+        &= \mbf{A}_{k-1}\delta\mbfhatrv{x}_{k-1} - \mbf{L}_{k-1}\mbfrv{w}_{k-1}.
+    \end{align}
+    The covariance on $\delta\mbfcheck{x}_{k}$ is then given by
+    \begin{align}
+        \cov{\delta\mbfcheckrv{x}_{k}} &= \mbf{A}_{k}\mbfhat{P}_{k-1}\mbf{A}_{k-1}^{\trans} + \mbf{L}_{k-1}\mbf{Q}_{k-1}\mbf{L}_{k-1}^{\trans}
+    \end{align}
+    which is equivalent to \eqref{eq:EKF: prediction cov}.
+
+    Applying the same concept on the correction equation gives
+    \begin{align}
+        \delta\mbfhatrv{x}_{k} 
+        &= \mbfcheckrv{x}_{k} + \mbf{K}_{k}\left( \mbfrv{y}_{k} - \mbf{g}\left( \mbfcheckrv{x}_{k}, \mbf{0} \right) \right) - \mbf{x}_{k}\\
+        &= \mbfcheckrv{x}_{k} + \mbf{K}_{k}\left( \mbf{g}\left( \mbf{x}_{k},\mbfrv{n}_{k} \right) - \mbf{g}\left( \mbfcheckrv{x}_{k}, \mbf{0} \right) \right) - \mbf{x}_{k}\\
+        &= \mbf{x}_{k} + \delta\mbfcheckrv{x}_{k} + \mbf{K}_{k}\left( \mbf{g}\left( \mbf{x}_{k},\mbfrv{n}_{k} \right) - \mbf{g}\left( \mbfcheckrv{x}_{k}, \mbf{0} \right) \right)\\
+        &\approx \delta\mbfcheckrv{x}_{k} +\mbf{K}_{k}\left( \mbf{g}\left( \mbfcheck{x}_{k}, \mbf{0} \right) + \mbf{H}_{k}\left( \mbf{x}_{k} - \mbfcheckrv{x}_{k} \right) \right.\nonumber\\&\qquad \left.+ \mbf{L}_{k}\left( \mbfrv{n}_{k}-\mbf{0} \right) - \mbf{g}\left( \mbfcheck{x}_{k},\mbf{0} \right) \right)\\
+        &= \delta\mbfcheckrv{x}_{k} +\mbf{K}_{k}\left( \mbf{H}_{k}\left( \mbf{x}_{k} - \mbfcheckrv{x}_{k} \right) + \mbf{L}_{k}\left( \mbfrv{n}_{k}-\mbf{0} \right) \right)\\
+        &= \delta\mbfcheckrv{x}_{k} +\mbf{K}_{k}\left( -\mbf{H}_{k}\delta\mbfcheckrv{x}_{k} + \mbf{L}_{k}\left( \mbfrv{n}_{k}-\mbf{0} \right) \right)\\
+        &= \left( \eye - \mbf{K}_{k}\mbf{H}_{k} \right)\delta\mbfcheckrv{x}_{k} + \mbf{K}_{k}\mbf{M}_{k}\mbfrv{n}_{k}.
+    \end{align}
+    The covariance is then given by
+    \begin{align}
+        \cov{\delta\mbfhatrv{x}_{k}} &= \left( \eye - \mbf{K}_{k}\mbf{H}_{k} \right)\mbfcheck{P}_{k}\left( \eye - \mbf{K}_{k}\mbf{H}_{k} \right)^{\trans} + \mbf{K}_{k}\mbf{M}_{k}\mbf{R}_{k}\mbf{M}_{k}^{\trans}\mbf{K}_{k}^{\trans}
+    \end{align}
+    which is equivalent to \eqref{eq:EKF: correction cov}.
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % InEKF
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \section{The invariant extended Kalman filter}
+    The invariant filter\cite{Barrau_Invariant_2018} is applicable to states that live in Lie groups. However, since the filter deals with random variables, it's important to know how to represent random variables living in Lie groups. That is, $\mbfrv{X}\in G$, where $G$ is some group.
+
+    \subsection{Random variables on Lie groups}
+    In the Euclidean case, Remark~\ref{remark:splitting gaussian rv into sum} can be used to describe a random variable. However, how can we do that in a non-Euclidean case? Let's restrict ourselves with Lie groups. 
+     
+    
+    A random variable (on a Lie group) can be given by
+    \begin{align}
+        \mbfrv{X} &= \mbfbar{X}\delta\mbfrv{X}\\
+        &= \mbfbar{X}\exp\left( \mbsrv{\xi}\expand \right)\\
+        &= \mbfbar{X} \rplus \mbsrv{\xi},
+    \end{align}
+    where $\rplus$ is the `right perturbation' operator\footnote{There are multiple versions of the $\oplus$ operator such as left, left-invariant, right, and right-invariant.} from
+     \cite{Sola_micro_2019} and
+    \begin{align}
+        \mbsrv{\xi} &\sim \mc{N}\left( \mbf{0}, \mbs{\Sigma} \right).
+    \end{align}
+    This is the Lie-group version of Remark~\ref{remark:splitting gaussian rv into sum}. Note that $\mbfbar{X}\in G$ and $\exp\left( \mbsrv{\xi}\expand \right)\in G$, thus $\mbfrv{X}\in G$ since $G$ is a Lie group which is closed under multiplication.
+
+    \subsection{Left-invariant perturbation}
+    The left-invariant ``addition'' $\liplus : G \times \rnums^{n} \to G$ is defined by
+    \begin{align}
+        \mbf{X}\liplus\mbs{\xi} 
+        &\coloneqq \mbf{X}\exp\left( -\mbs{\xi}\expand \right)\\
+        &= \mbf{X}\Exp\left( -\mbs{\xi} \right),
+    \end{align}
+    and the left-invariant ``subtraction'' $\liminus : G \times G \to \rnums^{n}$ is defined by
+    \begin{align}
+        \mbf{X}_{2}\ominus\mbf{X}_{1} 
+        &\coloneqq \log\left(\mbf{X}_{2}\inv\mbf{X}_{1}\right)\contract\\
+        &= \Log\left(\mbf{X}_{2}\inv\mbf{X}_{1}\right).
+    \end{align}
+
+    \subsection{The invariant extended Kalman filter}
+    Without deep derivation, let's take the extended Kalman filter equations \eqref{eq:EKF eqns} and expand them to states that live on smooth manifolds. Let's simply replace the Euclidean $+$ with $\liplus$. The prediction equations will then be
+    \begin{align}
+        \mbfcheck{X}_{k} &= \mbf{F}\left( \mbfhat{X}_{k-1}, \mbf{u}_{k-1}, \mbf{0} \right),\\
+        \mbfcheck{P}_{k} &= \mbf{A}_{k-1}\mbfhat{P}_{k-1}\mbf{A}_{k-1} + \mbf{L}_{k-1}\mbf{Q}_{k-1}\mbf{L}_{k-1}^{\trans}.
+    \end{align}
+    But what is $\mbfcheck{P}_{k}$ exactly? Remember, we had to define an error (left invariant, right invariant, etc.).
+
+    
+
+    % \backmatter
+    \bibliography{references}
+    % \bibliographystyle{plainnat}
+    \bibliographystyle{IEEEtran}
 \end{document}
