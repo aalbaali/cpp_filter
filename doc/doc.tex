@@ -4,6 +4,12 @@
 
 \newcommand{\cpp}{C\texttt{++}}
 
+% Might prevent marginnotes from jumping to another page
+\def\mathnote#1{%
+  \tag*{\rlap{\hspace\marginparsep\smash{\parbox[t]{\marginparwidth}{%
+  \footnotesize#1}}}}
+}
+
 
 % % This command is needed for building in linux
 % \captionsetup{compatibility=false}
@@ -118,7 +124,7 @@
             \label{eq:EKF: KF gain}
             \mbf{K}_{k} &= \mbfcheck{P}_{k}\mbf{H}_{k}\left( \mbf{H}_{k}\mbfcheck{P}_{k}\mbf{H}_{k}^{\trans} + \mbf{M}_{k}\mbf{R}_{k}\mbf{M}_{k}^{\trans} \right)\inv,\\
             \label{eq:EKF: correction}
-            \mbfhat{x}_{k} &= \mbfcheck{x}_{k} + \mbf{K}_{k}\left( \mbf{y}_{k} + \mbf{g}_{k}\left( \mbfcheck{x}_{k}, \mbf{0} \right) \right),\\
+            \mbfhat{x}_{k} &= \mbfcheck{x}_{k} + \mbf{K}_{k}\left( \mbf{y}_{k} - \mbf{g}_{k}\left( \mbfcheck{x}_{k}, \mbf{0} \right) \right),\\
             \label{eq:EKF: correction cov}
             \mbfhat{P}_{k} &= \left( \eye - \mbf{K}_{k}\mbf{H}_{k} \right)\mbfcheck{P}_{k}\left( \eye - \mbf{K}_{k}\mbf{H}_{k} \right)^{\trans} \nonumber\\&\qquad+ \mbf{K}_{k}\mbf{M}_{k}\mbf{R}_{k}\mbf{M}_{k}^{\trans}\mbf{K}_{k}^{\trans},
         \end{align}
@@ -147,7 +153,9 @@
     \end{remark}
     Using Remark~\ref{remark:splitting gaussian rv into sum}, define the (random) variables
     \begin{align}
+        \label{eq:KF: prediction err. def.}
         \delta\mbfcheckrv{x}_{k} &\coloneqq \mbfcheckrv{x}_{k} -  \mbf{x}_{k},\\
+        \label{eq:KF: correction err. def.}
         \delta\mbfhatrv{x}_{k} &\coloneqq \mbfhatrv{x}_{k} -  \mbf{x}_{k},
     \end{align}
     where
@@ -194,6 +202,26 @@
     \section{The invariant extended Kalman filter}
     The invariant filter\cite{Barrau_Invariant_2018} is applicable to states that live in Lie groups. However, since the filter deals with random variables, it's important to know how to represent random variables living in Lie groups. That is, $\mbfrv{X}\in G$, where $G$ is some group.
 
+    Let the $SE(n)$ process model be given by
+    \begin{align}
+        \label{eq:InEKF: process model}
+        \mbfrv{X}_{k} &= \mbf{F}\left( \mbfrv{X}_{k-1}, \mbf{u}_{k-1}, \mbfrv{w}_{k-1} \right)\\
+        &= \mbfrv{X}_{k-1}\Exp\left( T_{k-1}\mbf{u}_{k-1} \right)\Exp(\mbfrv{w}_{k-1})\\
+        &= \mbfrv{X}_{k-1}\mbs{\Xi}_{k-1}\Exp(\mbfrv{w}_{k-1}),
+    \end{align}
+    \marginnote[-4em]{$T_{k-1} \coloneqq t_{k}-t_{k-1}$ is the sampling period.}
+    the left-invariant measurement model is given by
+    \begin{align}
+        \label{eq:InEKF: LI meas. model}
+        \mbfrv{y}_{k} &= \mbfrv{X}_{k}\mbf{b} + \mbfrv{n}_{k},
+    \end{align}
+    and the right-invariant measurement model is given by
+    \begin{align}
+        \label{eq:InEKF: RI meas. model}
+        \mbfrv{y}_{k} &= \mbfrv{X}_{k}\inv\mbf{b} + \mbfrv{n}_{k},
+    \end{align}
+    where $\mbf{b}$ is some known constant column matrix.
+
     \subsection{Random variables on Lie groups}
     In the Euclidean case, Remark~\ref{remark:splitting gaussian rv into sum} can be used to describe a random variable. However, how can we do that in a non-Euclidean case? Let's restrict ourselves with Lie groups. 
      
@@ -226,15 +254,101 @@
     \end{align}
 
     \subsection{The invariant extended Kalman filter}
-    Without deep derivation, let's take the extended Kalman filter equations \eqref{eq:EKF eqns} and expand them to states that live on smooth manifolds. Let's simply replace the Euclidean $+$ with $\liplus$. The prediction equations will then be
+    Without deep derivation, let's take the extended Kalman filter equations \eqref{eq:EKF eqns} and expand them to states that live on smooth manifolds. Let's simply replace the Euclidean $+$ and $-$ operators with $\oplus$ and $\ominus$, respectively\footnote{There are different `flavors' as discussed above.}. 
+    
+    The prediction equations will then be
     \begin{align}
+        \label{eq:InEKF: state prediction}
         \mbfcheck{X}_{k} &= \mbf{F}\left( \mbfhat{X}_{k-1}, \mbf{u}_{k-1}, \mbf{0} \right),\\
+        \label{eq:InEKF: state prediction cov.}
         \mbfcheck{P}_{k} &= \mbf{A}_{k-1}\mbfhat{P}_{k-1}\mbf{A}_{k-1} + \mbf{L}_{k-1}\mbf{Q}_{k-1}\mbf{L}_{k-1}^{\trans}.
     \end{align}
-    But what is $\mbfcheck{P}_{k}$ exactly? Remember, we had to define an error (left invariant, right invariant, etc.).
+    But what are $\mbfcheck{P}_{k}$, $\mbf{A}_{k-1}$, and $\mbf{L}_{k-1}$ exactly? Remember, we had to define an error (left invariant, right invariant, etc.).
 
+    Similar to the estimator prediction error \eqref{eq:KF: prediction err. def.} and correction error \eqref{eq:KF: correction err. def.} of the extended Kalman filter, define the estimator prediction and correction left-invariant errors as
+    \sidenote{Note that $\mbf{X}_{k}$ is not a random variable in the error definition.}
+    \sidenote{The definition $\delta\mbscheckrv{\xi}\coloneqq \mbfcheckrv{X} \liminus \mbf{X}$ can also be used. However, the KF equations would look slightly different but the results would still hold.}
+    \begin{align}
+        \label{eq:InEKF: prediction error}
+        \delta\mbscheckrv{\xi}_{k} &\coloneqq \mbf{X}_{k} \liminus \mbfcheckrv{X}_{k},\\
+        \label{eq:InEKF: correction error}
+        \delta\mbshatrv{\xi}_{k}  &\coloneqq \mbf{X}_{k} \liminus \mbfhatrv{X}_{k},
+    \end{align}
+    respectively.
+
+    Plugging \eqref{eq:InEKF: process model} and \eqref{eq:InEKF: state prediction} into \eqref{eq:InEKF: prediction error} results in
+    \begin{align}
+        \delta\mbscheckrv{\xi}_{k} 
+        &= \mbf{X}_{k} \liminus \mbfcheckrv{X}_{k}\\
+        &= \mbf{F}\left( \mbfhatrv{X}_{k-1}, \mbf{u}_{k-1}, \mbfrv{w}_{k-1} \right) \liminus \mbf{F}\left( \mbfhat{X}_{k-1}, \mbf{u}_{k-1}, \mbf{0} \right)\\
+        &= \Log\left( \left( \mbf{X}_{k-1}\mbs{\Xi}_{k-1}\Exp(\mbfrv{w}_{k-1}) \right)\inv\mbfhatrv{X}_{k-1}\mbs{\Xi}_{k-1} \right)\\
+        &= \Log\left( \Exp(-\mbfrv{w}_{k-1})\mbs{\Xi}_{k-1}\inv\mbf{X}_{k-1}\inv\mbfhatrv{X}_{k-1}\mbs{\Xi}_{k-1} \right)\\
+        &= \Log\left( \Exp(-\mbfrv{w}_{k-1})\mbs{\Xi}_{k-1}\inv\Exp(\mbshatrv{\xi}_{k-1})\mbs{\Xi}_{k-1} \right)\\
+        &= \Log\left( \Exp(-\mbfrv{w}_{k-1})\Exp\left( \Adj{\mbs{\Xi}_{k-1}\inv}\mbshatrv{\xi}_{k-1} \right) \right)\\
+        &\approx \underbrace{\Adj{\mbs{\Xi}_{k-1}\inv}}_{\mbf{A}_{k-1}}\mbshatrv{\xi}_{k-1} - \mbfrv{w}_{k-1},
+    \end{align}
+    \marginnote[-11em]{Note the usage of $\Exp(\mbshatrv{\xi}_{k-1}) = \mbf{X}_{k-1}\inv\mbfhatrv{X}_{k-1}$.}
+    \marginnote[-7em]{Note $\mbf{X}\Exp(\mbs{\xi})\mbf{X}\inv = \Exp(\Adj{\mbf{X}}\mbs{\xi})$.}
+    where the last equation is an approximation from the BCH formula \cite{Barfoot_State_2017a} and $\mbf{L}_{k-1} = -\eye$.
     
+    The covariance on the prediction error is then given by
+    \begin{align}
+        \mbfcheck{P}_{k} &\coloneqq \cov{\mbscheckrv{\xi}_{k}} \\
+        &\approx \mbf{A}_{k-1}\mbfhat{P}_{k-1}\mbf{A}_{k-1}^{\trans} + \mbf{L}_{k-1}\mbf{Q}_{k-1}\mbf{L}_{k-1}^{\trans}.
+    \end{align}
 
+    The correction equations can be generalized from \eqref{eq:EKF: correction} by using `$\liplus$' in place of `$+$'. Specifically,
+    \begin{align}
+        \mbfhatrv{X}_{k} &= \mbfcheckrv{X}_{k} \liplus \left( \mbf{K}_{k}(\mbf{y}_{k} - \mbf{g}(\mbfcheckrv{X}_{k}, \mbf{0})) \right).
+    \end{align}
+    What's the covariance on $\mbfhatrv{X}_{k}$?
+    \sidenote{Actually, covariance is on $\mbshatrv{\xi}_{k}$.} To answer the question, lets' stick with the left-invariant measurement function \eqref{eq:InEKF: LI meas. model} and plug in the appropriate variables into \eqref{eq:InEKF: correction error}.
+    \begin{align}
+        \mbshatrv{\xi}_{k} 
+        &= \mbf{X}_{k}\liminus\mbfhatrv{X}_{k}\\
+        &= \mbf{X}_{k} \liminus \left( \mbfcheckrv{X}_{k}\liplus (\mbf{K}_{k}\mbfrv{z}_{k}) \right)\\
+        &= \Log\left( \mbf{X}_{k}\inv\mbfcheckrv{X}_{k}\Exp(-\mbf{K}_{k}\mbfrv{z}_{k}) \right)\\
+        &= \Log(\Exp(\mbscheckrv{\xi}_{k})\Exp(-\mbf{K}_{k}\mbfrv{z}_{k}))\\
+        \label{eq:InEKF: correction error as a function of innovation}
+        &\approx \mbscheckrv{\xi}_{k} - \mbf{K}_{k}\mbfrv{z}_{k}.
+    \end{align}
+    What's the innovation $\mbfrv{z}_{k}$? That's where invariant filtering comes in. Define the left-invariant innovation\sidenote{The left-invariant innovation is used since we assumed we have a left-invariant measurement function.} by
+    \begin{align}
+        \mbfrv{z}_{k} 
+        &\coloneqq \mbfcheckrv{X}_{k}\inv\left( \mbfrv{y}_{k} - \mbf{g}(\mbfcheckrv{X}_{k},\mbf{0}) \right)\\
+        &= \mbfcheckrv{X}_{k}\inv\left( \mbf{X}_{k}\mbf{b} + \mbfrv{n}_{k} - \mbfcheck{X}_{k}\mbf{b}\right)\\
+        &= \mbfcheckrv{X}_{k}\inv\mbf{X}_{k}\mbf{b} + \mbfcheckrv{X}_{k}\inv\mbfrv{n}_{k} - \mbf{b}\\
+        &= \Exp(-\mbscheckrv{\xi}_{k})\mbf{b} - \mbf{b} \mbfcheckrv{X}_{k}\inv\mbfrv{n}_{k}\\
+        &\approx \left( \eye - \mbscheckrv{\xi}_{k}\expand \right)\mbf{b} - \mbf{b} + \mbfcheckrv{X}_{k}\inv\mbfrv{n}_{k}\\
+        &= -\mbscheckrv{\xi}_{k}\expand\mbf{b} + \mbfcheckrv{X}_{k}\inv\mbfrv{n}_{k}\\
+        &= \underbrace{-\mbf{b}^{\odot}}_{\mbf{H}_{k}}\mbscheckrv{\xi}_{k} + \underbrace{\mbfcheckrv{X}_{k}\inv}_{\mbf{M}_{k}}\mbfrv{n}_{k},
+    \end{align}
+    \marginnote[-2cm]{Note that the state Jacobian $\mbf{H}_{k}$ is state-independent. That is, it does not depend on the state $\mbf{X}_{k}$.}
+    where 
+    \begin{align}
+        \mbs{\xi}\expand\mbf{b} \coloneqq \mbf{b}^{\odot}\mbs{\xi}
+    \end{align}
+    is defined in \cite[pg.~253]{Barfoot_State_2017a}.
+    
+    Plugging the above results into \eqref{eq:InEKF: correction error as a function of innovation} gives the approximation
+    \begin{align}
+        \mbshatrv{\xi}_{k} &= 
+        \mbscheckrv{\xi}_{k} - \mbf{K}_{k}\mbfrv{z}_{k}\\
+        &\approx
+        \mbscheckrv{\xi}_{k} - \mbf{K}_{k}\left( \mbf{H}_{k}\mbscheckrv{\xi}_{k} + \mbf{M}_{k}\mbfrv{n}_{k} \right)\\
+        &= \left( \eye - \mbf{K}_{k}\mbf{H}_{k} \right)\mbscheckrv{\xi}_{k} - \mbf{K}_{k}\mbf{M}_{k}\mbfrv{n}_{k},
+    \end{align}
+    which looks very similar to the Kalman filter correction equation with a difference of sign on $\mbfrv{n}_{k}$. The covariance on the correction error is then given by
+    \begin{align}
+        \mbfhat{P}_{k} &\coloneqq \cov{\mbshatrv{\xi}_{k}}\\
+        &\approx \left( \eye - \mbf{K}_{k}\mbf{H}_{k} \right)\mbfcheck{P}_{k}\left( \eye - \mbf{K}_{k}\mbf{H}_{k} \right)^{\trans} + \mbf{K}_{k}\mbf{M}_{k}\mbf{R}_{k}\mbf{M}_{k}^{\trans}\mbf{K}_{k}^{\trans},
+    \end{align}
+    which exactly matches the EKF correction covariance \eqref{eq:EKF: correction cov}.
+
+
+
+
+    \clearpage
     % \backmatter
     \bibliography{references}
     % \bibliographystyle{plainnat}
