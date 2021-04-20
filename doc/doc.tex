@@ -207,6 +207,7 @@
         \label{eq:InEKF: process model}
         \mbfrv{X}_{k} &= \mbf{F}\left( \mbfrv{X}_{k-1}, \mbf{u}_{k-1}, \mbfrv{w}_{k-1} \right)\\
         &= \mbfrv{X}_{k-1}\Exp\left( T_{k-1}\mbf{u}_{k-1} \right)\Exp(\mbfrv{w}_{k-1})\\
+        \label{eq:InEKF: SE3 process model}
         &= \mbfrv{X}_{k-1}\mbs{\Xi}_{k-1}\Exp(\mbfrv{w}_{k-1}),
     \end{align}
     \marginnote[-4em]{$T_{k-1} \coloneqq t_{k}-t_{k-1}$ is the sampling period.}
@@ -285,6 +286,7 @@
         &= \Log\left( \Exp(-\mbfrv{w}_{k-1})\mbs{\Xi}_{k-1}\inv\mbf{X}_{k-1}\inv\mbfhatrv{X}_{k-1}\mbs{\Xi}_{k-1} \right)\\
         &= \Log\left( \Exp(-\mbfrv{w}_{k-1})\mbs{\Xi}_{k-1}\inv\Exp(\mbshatrv{\xi}_{k-1})\mbs{\Xi}_{k-1} \right)\\
         &= \Log\left( \Exp(-\mbfrv{w}_{k-1})\Exp\left( \Adj{\mbs{\Xi}_{k-1}\inv}\mbshatrv{\xi}_{k-1} \right) \right)\\
+        \label{eq:InEKF: prediction err. function of Jacs}
         &\approx \underbrace{\Adj{\mbs{\Xi}_{k-1}\inv}}_{\mbf{A}_{k-1}}\mbshatrv{\xi}_{k-1} - \mbfrv{w}_{k-1},
     \end{align}
     \marginnote[-11em]{Note the usage of $\Exp(\mbshatrv{\xi}_{k-1}) = \mbf{X}_{k-1}\inv\mbfhatrv{X}_{k-1}$.}
@@ -314,6 +316,7 @@
     \end{align}
     What's the innovation $\mbfrv{z}_{k}$? That's where invariant filtering comes in. Define the left-invariant innovation\sidenote{The left-invariant innovation is used since we assumed we have a left-invariant measurement function.} by
     \begin{align}
+        \label{eq:InEKF: innovation: begin}
         \mbfrv{z}_{k} 
         &\coloneqq \mbfcheckrv{X}_{k}\inv\left( \mbfrv{y}_{k} - \mbf{g}(\mbfcheckrv{X}_{k},\mbf{0}) \right)\\
         &= \mbfcheckrv{X}_{k}\inv\left( \mbf{X}_{k}\mbf{b} + \mbfrv{n}_{k} - \mbfcheck{X}_{k}\mbf{b}\right)\\
@@ -321,9 +324,10 @@
         &= \Exp(-\mbscheckrv{\xi}_{k})\mbf{b} - \mbf{b} \mbfcheckrv{X}_{k}\inv\mbfrv{n}_{k}\\
         &\approx \left( \eye - \mbscheckrv{\xi}_{k}\expand \right)\mbf{b} - \mbf{b} + \mbfcheckrv{X}_{k}\inv\mbfrv{n}_{k}\\
         &= -\mbscheckrv{\xi}_{k}\expand\mbf{b} + \mbfcheckrv{X}_{k}\inv\mbfrv{n}_{k}\\
+        \label{eq:InEKF: innovation: Jacobians}
         &= \underbrace{-\mbf{b}^{\odot}}_{\mbf{H}_{k}}\mbscheckrv{\xi}_{k} + \underbrace{\mbfcheckrv{X}_{k}\inv}_{\mbf{M}_{k}}\mbfrv{n}_{k},
     \end{align}
-    \marginnote[-2cm]{Note that the state Jacobian $\mbf{H}_{k}$ is state-independent. That is, it does not depend on the state $\mbf{X}_{k}$.}
+    \marginnote[-1.5cm]{Note that the Jacobian w.r.t. the state  $\mbf{H}_{k}$ is state-independent. That is, it does not depend on the state $\mbf{X}_{k}$.}
     where 
     \begin{align}
         \mbs{\xi}\expand\mbf{b} \coloneqq \mbf{b}^{\odot}\mbs{\xi}
@@ -345,6 +349,114 @@
     \end{align}
     which exactly matches the EKF correction covariance \eqref{eq:EKF: correction cov}.
 
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % L-InEKF example
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \section{Example: Left-invariant extended Kalman filter}
+    In this section, an example of the left-invariant extended Kalman filter (L-InEKF) is presented. The example is applied on a robot in 3D space. That is, the states $\mbf{X}$ live in the 3D special Euclidean Lie group $SE(3)$. A \cpp implementation of this example is provided in the repository.
+
+    The state is given by
+    \begin{align}
+        \mbf{X}_{k} &= 
+        \bbm \mbf{C}_{ab_{k}} &\disp[b_{k}a][a] \\ \mbf{0} & 1 \ebm\\
+        &= \Exp(\mbs{\xi}_{k}),
+    \end{align}
+    where $\dcm[ab]\in SO(3)$ is the attitude\footnote{Specifically, it's the DCM of frame $\rframe_{a}$ relative to frame $\rframe_{b}$.} and $\disp[b_{k}a][a]$ is the displacement of point $b_{k}$ (robot body) relative to some arbitrary point $a$ resolved in the (world) frame $\rframe_{a}$.\footnote{I realize that it might be confusing to use the same letter to denote a point and a frame.} 
+    Furthermore, the Lie algebra coordinates are given by
+    \begin{align}
+        \label{eq:SE2 xi = [xiphi; xir]}
+        \mbs{\xi}_{k} &=
+        \bbm 
+            \mbs{\xi}^{\phi}\\
+            \mbs{\xi}^{\mathrm{r}}
+        \ebm,
+    \end{align}
+    where $\mbs{\xi}^{\phi}$ are coordinates associated with attitude, and $\mbs{\xi}^{\mathrm{r}}$ are the generalized position\footnote{Note that $\mbs{\xi}^{\mathrm{r}}\neq\disp[b_{k}a][a]$ in general.}. Note that some authors use different ordering for $\mbs{\xi}$. For example, in \cite{Barfoot_State_2017a}, the ordering of $\mbs{\xi}^{\phi}$ and $\mbs{\xi}^{\mathrm{r}}$ is flipped. This has an effect on the Adjoint representation and the Jacobians, so care must be taken.
+
+    \subsection{Process model}
+    The process model is given by \eqref{eq:InEKF: SE3 process model} and the Jacobians are given by \eqref{eq:InEKF: prediction err. function of Jacs}.
+    Specifically, the Jacobian of the process model w.r.t. $\mbs{\xi}$ is given by
+    \begin{align}
+        \mbf{A}_{k-1} &= \Adj{\mbs{\Xi}_{k-1}\inv},
+    \end{align}
+    where
+    \begin{align}
+        \Adj{\mbf{X}} &= 
+        \bbm
+            \dcm[ab] & \mbf{0} \\ 
+            {\disp[ba][a]}\crossop\dcm[ab] & \dcm[ab]
+        \ebm,\\
+        \Adj{\mbf{X}\inv} &=
+        \bbm
+        \dcmtrans[ab] & \mbf{0} \\ 
+        -\dcmtrans[ab]{\disp[ba][a]}\crossop & \dcmtrans[ab]
+        \ebm.
+    \end{align}
+    \marginnote[-2cm]{Note that the Adjoint representation depends on the ordering of $\mbs{\xi}$ defined in \eqref{eq:SE2 xi = [xiphi; xir]}.}
+    
+    \subsection{Measurement model: GPS}
+    Let the measurement model be a position sensor given by
+    \begin{align}
+        \mbfrv{y}_{k} 
+        &= \disp[b_{k}a][a] + \mbfrv{n}_{k} \\
+        &= \bbm \eye & \mbf{0} \ebm 
+        \underbrace{\bbm \dcm[ab_{k}] & \disp[b_{k}a][a] \\\mbf{0} & 1 \ebm}_{\mbf{X}_{k}} 
+        \underbrace{\bbm 0 \\ 0 \\ 1 \ebm}_{\mbf{b}} + \mbfrv{n}_{k}.
+    \end{align}
+    To make things easier, let
+    \begin{align}
+        \underbrace{
+        \bbm 
+            \mbfrv{y}_{k} \\ 
+            1
+        \ebm}_{\mbftilderv{y}_{k}}
+        &=
+        \mbf{X}_{k}\mbf{b} +
+        \underbrace{
+        \bbm
+            \mbfrv{n}_{k} \\ 0
+        \ebm}_{\tilde{\mbfrv{n}}_{k}}.
+    \end{align}
+
+    The innovation \eqref{eq:InEKF: innovation: Jacobians} (using $\tilde{\mbfrv{y}}_{k}$) is then given by
+    \begin{align}
+        \mbftilderv{z}_{k}
+        &\approx -\mbf{b}^{\odot}\mbscheckrv{\xi}_{k} + \mbfcheckrv{X}_{k}\inv \mbftilderv{n}_{k}\\
+        &= -\bbm \mbf{0} & \eye \\ \mbf{0} & \mbf{0} \ebm \mbscheckrv{\xi}_{k} + \bbm \mbfcheckrv{C}_{ab_{k}}^{\trans} & -\mbfcheckrv{C}_{ab_{k}}^{\trans}\mbfcheckrv{r}^{b_{k}a}_{a} \\ \mbf{0} & 1 \ebm \bbm \mbfrv{n}_{k} \\ 0 \ebm\\
+        &= 
+        \bbm 
+            - \bbm \mbf{0} & \eye \ebm\mbscheckrv{\xi}_{k} + \mbfcheckrv{C}_{ab_{k}}^{\trans}\mbfrv{n}_{k}\\
+            0
+        \ebm\\
+        &= \bbm 
+            \mbfrv{z}_{k}\\
+            0
+         \ebm.
+    \end{align}
+    \marginnote{
+        From \cite{Barfoot_State_2017a}, the $(\cdot)^{\odot}$ operator for $SE(3)$ is given by
+        \begin{align}
+            \bbm
+                \mbf{b}_{1:3}\\
+                b_{4}
+            \ebm^{\odot}
+            &=
+            \bbm
+                -\mbf{b}_{1:3}\crossop & b_{4}\eye \\ \mbf{0} & \mbf{0}
+            \ebm.
+        \end{align}
+    }
+    Ignoring the last row of the equation above gives the (modified) innovation
+    \begin{align}
+        \mbfrv{z}_{k} &= \underbrace{-\bbm \mbf{0} & \eye \ebm}_{\mbf{H}_{k}}\mbscheckrv{\xi}_{k} + \underbrace{\mbfcheckrv{C}_{ab_{k}}^{\trans}}_{\mbf{M}_{k}}\mbfrv{n}_{k}.
+    \end{align}
+    Thus, 
+    \begin{align}
+        \mbf{H}_{k} &= - \bbm \mbf{0} & \eye \ebm,\\
+        \mbf{M}_{k} &= \mbfcheckrv{C}_{ab_{k}}^{\trans}.
+    \end{align}
+    \marginnote{Note that the Jacobian of the innovation w.r.t. to $\mbscheck{\xi}_{k}$ is state-independent.}
 
 
 
