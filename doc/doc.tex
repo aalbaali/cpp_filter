@@ -402,7 +402,7 @@
         &= \disp[b_{k}a][a] + \mbfrv{n}_{k} \\
         &= \bbm \eye & \mbf{0} \ebm 
         \underbrace{\bbm \dcm[ab_{k}] & \disp[b_{k}a][a] \\\mbf{0} & 1 \ebm}_{\mbf{X}_{k}} 
-        \underbrace{\bbm 0 \\ 0 \\ 1 \ebm}_{\mbf{b}} + \mbfrv{n}_{k}.
+        \underbrace{\bbm \mbf{0}\\ 1 \ebm}_{\mbf{b}} + \mbfrv{n}_{k}.
     \end{align}
     To make things easier, let
     \begin{align}
@@ -434,7 +434,7 @@
             0
          \ebm.
     \end{align}
-    \marginnote{
+    \marginnote[-4.5cm]{
         From \cite{Barfoot_State_2017a}, the $(\cdot)^{\odot}$ operator for $SE(3)$ is given by
         \begin{align}
             \bbm
@@ -456,7 +456,7 @@
         \mbf{H}_{k} &= - \bbm \mbf{0} & \eye \ebm,\\
         \mbf{M}_{k} &= \mbfcheckrv{C}_{ab_{k}}^{\trans}.
     \end{align}
-    \marginnote{Note that the Jacobian of the innovation w.r.t. to $\mbscheck{\xi}_{k}$ is state-independent.}
+    \marginnote[-1.7cm]{Note that the Jacobian of the innovation w.r.t. to $\mbscheck{\xi}_{k}$ is state-independent.}
 
 
 
