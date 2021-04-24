@@ -4,16 +4,16 @@ project(example_SE2)
 add_executable(example_SE2 example_SE2.cpp)
 # add_executable(${PROJECT_NAME} playground.cpp)
 
-# target_include_directories(example_SE2 SYSTEM PUBLIC "../include/RandomVariable/src/")
-# target_link_libraries(example_SE2 PRIVATE RandomVariable)
-target_include_directories(example_SE2 SYSTEM PUBLIC "../extern/RandomVariable/include/RandomVariable")
-target_link_libraries(example_SE2 yaml-cpp)
+target_link_libraries(example_SE2 
+  yaml-cpp
+  RandomVariable::RandomVariable
+  )
 
 target_include_directories(example_SE2 PRIVATE ${EIGEN3_INCLUDE_DIRS})
 
 
-# # Add manif include directories to the target
-# target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${manif_INCLUDE_DIRS})
+# Add manif include directories to the target
+target_include_directories(example_SE2 SYSTEM PUBLIC ${manif_INCLUDE_DIRS})
 
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
