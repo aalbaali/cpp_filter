@@ -13,7 +13,12 @@ find_package(manif REQUIRED)
 # Add the RandomVariable header class
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/extern/RandomVariable/cmake")
 find_package(RandomVariable)
+
+# Add Kalman fitler example
+message(STATUS "Building KalmanFilter")
+add_subdirectory( KalmanFilter)
 # Add InEKF
+message(STATUS "Building InEKF")
 add_subdirectory( InEKF)
 
 # set(CPACK_PROJECT_NAME ${PROJECT_NAME})

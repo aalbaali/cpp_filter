@@ -17,12 +17,10 @@ target_include_directories(example_SE2 SYSTEM PUBLIC ${manif_INCLUDE_DIRS})
 
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  message("CMAKE_BUILD_TYPE: Debug mode\n")
   # Add debug flag
-  target_compile_definitions(${PROJECT_NAME} PUBLIC DEBUG)
+  target_compile_definitions(example_SE2 PUBLIC DEBUG)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-  message("CMAKE_BUILD_TYPE: Release mode")
 endif()
 
 # Set required C++ standard flag
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_SE2 PROPERTY CXX_STANDARD 17)
