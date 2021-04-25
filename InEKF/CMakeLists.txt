@@ -1,20 +1,19 @@
 cmake_minimum_required( VERSION 3.10)
 project(example_SE2)
-# Find the Eigen library
-find_package(Eigen3 REQUIRED)
-# # Find the manif library
-find_package(manif REQUIRED)
-add_executable(${PROJECT_NAME} example_SE2.cpp)
+
+add_executable(example_SE2 example_SE2.cpp)
 # add_executable(${PROJECT_NAME} playground.cpp)
 
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "../include/RandomVariable/src/")
+target_link_libraries(example_SE2 
+  yaml-cpp
+  RandomVariable::RandomVariable
+  )
 
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIRS})
+target_include_directories(example_SE2 PRIVATE ${EIGEN3_INCLUDE_DIRS})
 
-target_link_libraries(${PROJECT_NAME} yaml-cpp)
 
-# # Add manif include directories to the target
-# target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${manif_INCLUDE_DIRS})
+# Add manif include directories to the target
+target_include_directories(example_SE2 SYSTEM PUBLIC ${manif_INCLUDE_DIRS})
 
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

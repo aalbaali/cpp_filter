@@ -4,12 +4,8 @@
 # Dependencies
 * Eigen3.
 * Manif (required for the filters operating on Lie groups).
+* Custom `RandomVariable` header-only library (this is included in the `extern` directory).
 
 # In this repo
-I'm implementing multiple filters using C++. Mainly,
-* A standard Kalman filter
-* A multiplicative Kalman filter on Lie groups (on SE(2)).
-
-# To do
-* Read `.yaml` configuration file.
-* Implement L-InEKF.
+* Implementation of a standard Kalman filter.
+* Implementation of a left-invariant extended Kalman filter (L-InEKF) on *SE(2)*.
