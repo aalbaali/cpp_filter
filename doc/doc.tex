@@ -33,6 +33,9 @@
 \usepackage{makeidx}
 \makeindex
 
+\setcounter{tocdepth}{2}
+
+
 \begin{document}
     % \frontmatter
     {    
@@ -458,6 +461,23 @@
     \end{align}
     \marginnote[-1.7cm]{Note that the Jacobian of the innovation w.r.t. to $\mbscheck{\xi}_{k}$ is state-independent.}
 
+    \subsection{Results}
+    The results of using the $SE(2)$ \cpp filter are presented in 
+    Figure~\ref{fig:se2_example_trajectories}-\ref{fig:se2_example_error_plots}.
+
+    \begin{figure}[h]
+        \centering
+        \includegraphics[width=\textwidth]{figs/se2_example_trajectories.eps}
+        \caption{Ground truth and estimated trajectories from the $SE(2)$ example.}
+        \label{fig:se2_example_trajectories}
+    \end{figure}
+
+    \begin{figure}[h]
+        \centering
+        \includegraphics[width=\textwidth]{figs/se2_example_error_plots.eps}
+        \caption{Error plots from the $SE(2)$ example.\\ Note that $\mbs{\xi}_{k} = \Log(\mbf{X}_{k})$, where $\mbf{X}\in SE(2)$ is the $SE(2)$ pose at time $t_{k}$.}
+        \label{fig:se2_example_error_plots}
+    \end{figure}
 
 
     \clearpage
