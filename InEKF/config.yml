@@ -1,3 +1,4 @@
+# Keep files absolute
 filename_prior  : "/home/aa/Documents/Data/Data_generator/SE2/meas_prior.txt"
 filename_gyro   : "/home/aa/Documents/Data/Data_generator/SE2/meas_gyro.txt"
 # Velocity measurements
