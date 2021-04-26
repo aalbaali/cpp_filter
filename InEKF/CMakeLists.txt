@@ -1,7 +1,14 @@
 cmake_minimum_required( VERSION 3.10)
 project(example_SE2)
 
-add_executable(example_SE2 example_SE2.cpp)
+list(APPEND CMAKE_PREFIX_PATH "../extern/RandomVariable/cmake")
+find_package(RandomVariable)
+# Find the Eigen library
+find_package(Eigen3 REQUIRED)
+# # Find the manif library
+find_package(manif REQUIRED)
+
+add_executable(example_SE2 example_SE2.cpp inekf_se2.cpp inekf_se2.h)
 # add_executable(${PROJECT_NAME} playground.cpp)
 
 target_link_libraries(example_SE2 
