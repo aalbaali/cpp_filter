@@ -52,20 +52,48 @@ typedef Eigen::Matrix< double, dof_gps, dof_x>          JacYgps_Xk;
 //  Jacobian w.r.t. measurement noise 
 typedef Eigen::Matrix< double, dof_gps, dof_gps>        JacYgps_nk;
 
+
+// Function that takes the .yml filename (including path) and returns the InEKF estiamtes.
+std::vector< PoseEstimate> GetSe2InekfEstimates( const std::string filename_config);
+
 int main(int argc, const char* argv[]){
     // Configurations
     YAML::Node config;
+    std::string filename_config;
     if(argc > 1){
-        std::string filename_config = argv[1];
+        filename_config = argv[1];
         std::cout << argc << " arguments passed: " << filename_config << std::endl;
         config = YAML::LoadFile( filename_config);
     }else{
         // read yaml file with config settings
-        std::string filename_config = "../config.yml";
+        filename_config = "../config.yml";
         std::cout << "Reading .yml configuration from '" << filename_config << "'" << std::endl;        
         config = YAML::LoadFile( filename_config);
     }    
+    // Get output file name
+    const std::string filename_out   = config["filename_out"].as<std::string>();
 
+    // Run L-InEKF
+    std::vector< PoseEstimate> X_hat = GetSe2InekfEstimates( filename_config);
+
+    RV::IO::write( X_hat, filename_out, "X");
+}
+
+std::vector< PoseEstimate> GetSe2InekfEstimates( const std::string filename_config){
+    // @param[in] filename_config 
+    //      Filename (including path) of the .yml configuration file.
+    // @return std::vector of PoseEstimate (instance of RandomVariable class).
+    // Assumptions:
+    //      - Assumes the files include GPS measurements as exteroceptive measurements.
+
+    // Read .yml configuration file
+    YAML::Node config= YAML::LoadFile( filename_config);
+#ifndef NDEBUG
+    // Display message if in debug model
+    std::cout << "Reading .yml configuration from '" << filename_config << "'" << std::endl;        
+#endif
+
+    // Read sensor files
     // Prior
     const std::string filename_prior = config["filename_prior"].as<std::string>();
     //  Gyro
@@ -75,8 +103,7 @@ int main(int argc, const char* argv[]){
     //  GPS
     const std::string filename_gps   = config["filename_gps"].as<std::string>();
     // Estimated states
-    const std::string filename_out   = config["filename_out"].as<std::string>();
-    // If there's an argument, then read the YAML configuration file from input. Otherwise, use default directory
+    // const std::string filename_out   = config["filename_out"].as<std::string>();
 
     // Import data
     //  Prior
@@ -198,7 +225,7 @@ int main(int argc, const char* argv[]){
         X_hat[k].setMean( X_k.transform());
         X_hat[k].setCov( P_k);
         X_hat[k].setCovIsGlobal( false);
-    }
+    }   
 
-    RV::IO::write( X_hat, filename_out, "X");
+    return X_hat;
 }
