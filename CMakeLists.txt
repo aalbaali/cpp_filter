@@ -14,12 +14,9 @@ find_package(manif REQUIRED)
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/extern/RandomVariable/cmake")
 find_package(RandomVariable)
 
-# Add Kalman fitler example
-message(STATUS "Building KalmanFilter")
-add_subdirectory( KalmanFilter)
-# Add InEKF
-message(STATUS "Building InEKF")
-add_subdirectory( InEKF)
+# Add examples subdirectory
+message(STATUS "Building examples")
+add_subdirectory( examples)
 
 # set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 # set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

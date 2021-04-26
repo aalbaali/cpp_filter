@@ -1,12 +1,15 @@
 cmake_minimum_required( VERSION 3.10)
 project(example_SE2)
 
-list(APPEND CMAKE_PREFIX_PATH "../extern/RandomVariable/cmake")
+# Find the RandomVariable directory
+list(APPEND CMAKE_PREFIX_PATH "../../extern/RandomVariable/cmake")
 find_package(RandomVariable)
 # Find the Eigen library
 find_package(Eigen3 REQUIRED)
-# # Find the manif library
+# Find the manif library
 find_package(manif REQUIRED)
+# Find the YAML-cpp library
+find_package(yaml-cpp REQUIRED)
 
 add_library(inekf_se2 SHARED inekf_se2.cpp inekf_se2.h)
 target_link_libraries(inekf_se2 
