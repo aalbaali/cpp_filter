@@ -1,8 +1,13 @@
 cmake_minimum_required( VERSION 3.10)
 project(example_SE2)
 
-# Find the RandomVariable directory
+# Append path with Config.cmake dirs/files
 list(APPEND CMAKE_PREFIX_PATH "../../extern/RandomVariable/cmake")
+list(APPEND CMAKE_PREFIX_PATH "../../cmake")
+
+# Find the InEKF package
+find_package(InEKF)
+# Find the RandomVariable directory
 find_package(RandomVariable)
 # Find the Eigen library
 find_package(Eigen3 REQUIRED)
@@ -11,23 +16,18 @@ find_package(manif REQUIRED)
 # Find the YAML-cpp library
 find_package(yaml-cpp REQUIRED)
 
-add_library(inekf_se2 SHARED inekf_se2.cpp inekf_se2.h)
-target_link_libraries(inekf_se2 
-  PUBLIC
-    yaml-cpp
-    Eigen3::Eigen
-    ${MANIF_INCLUDE_DIRS}
-    RandomVariable::RandomVariable
-  )
-
 add_executable(example_SE2 example_SE2.cpp)
 
 target_link_libraries(example_SE2   
-  PRIVATE
+  PUBLIC
     yaml-cpp
-    inekf_se2
+    InEKF
   )
 
+target_include_directories(
+  example_SE2
+  PUBLIC
+)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   # Add debug flag

@@ -9,7 +9,6 @@ find_package(Eigen3 REQUIRED)
 # # Find the manif library
 find_package(manif REQUIRED)
 
-
 # Add the RandomVariable header class
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/extern/RandomVariable/cmake")
 find_package(RandomVariable)
