@@ -11,6 +11,7 @@ find_package(Eigen3 REQUIRED)
 find_package(manif REQUIRED)
 # Find the YAML-cpp library
 find_package(yaml-cpp REQUIRED)
+find_package(InEKF)
 
 add_executable(example_SE2 example_SE2.cpp)
 

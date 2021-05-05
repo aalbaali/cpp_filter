@@ -42,3 +42,14 @@ install(FILES
           "${CMAKE_CURRENT_BINARY_DIR}/InEKFConfigVersion.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/InEKF
 )
+
+
+# generate and install export file
+install(EXPORT InEKFTargets
+        FILE InEKFTargets.cmake
+        NAMESPACE InEKF::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/InEKF
+)
+
+
+option(BUILD_EXAMPLES "Build all examples." OFF)

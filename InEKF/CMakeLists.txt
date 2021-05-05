@@ -8,17 +8,17 @@ find_package(manif REQUIRED)
 find_package(RandomVariable)
 
 # Build the InEKF library
-add_library(InEKF 
+add_library(SE2 
     STATIC  
         "${CMAKE_CURRENT_LIST_DIR}/inekf_se2.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/inekf_se2.h"
 )
 
 # Create alias
-add_library(InEKF::SE2 ALIAS InEKF)
+add_library(InEKF::SE2 ALIAS SE2)
 
 target_include_directories(
-    InEKF
+    SE2
     PUBLIC
         ${EIGEN_INCLUDE_DIRS}
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
@@ -26,7 +26,7 @@ target_include_directories(
 )
 
 target_link_libraries(
-    InEKF
+    SE2
     PUBLIC
         yaml-cpp
         Eigen3::Eigen
@@ -35,14 +35,14 @@ target_link_libraries(
 )
 
 set_target_properties(
-    InEKF
+    SE2
     PROPERTIES
         CXX_STANDARD    11
     )
 
 
 # install the target and create export-set
-install(TARGETS InEKF
+install(TARGETS SE2
         EXPORT InEKFTargets
         LIBRARY DESTINATION  "${CMAKE_INSTALL_LIBDIR}"
         ARCHIVE DESTINATION  "${CMAKE_INSTALL_LIBDIR}"
@@ -57,13 +57,4 @@ install(FILES
          "${CMAKE_INSTALL_INCLUDEDIR}/InEKF"
 )
 
-# generate and install export file
-install(EXPORT InEKFTargets
-        FILE InEKFTargets.cmake
-        NAMESPACE InEKF::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/InEKF
-)
-
-
-option(BUILD_EXAMPLES "Build all examples." OFF)
 
