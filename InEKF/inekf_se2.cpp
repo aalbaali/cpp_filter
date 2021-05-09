@@ -65,7 +65,7 @@ std::vector< PoseEstimate> GetSe2InekfEstimates(
         // Predict
         Pose X_k = Xkm1.plus( u_km1);
         // (LI) Jacobian w.r.t. state
-        JacF_Xkm1 J_F_xkm1 = (-u_km1).exp().adj();
+        JacF_Xkm1 J_F_xkm1 = (-dt_km1 * u_km1).exp().adj();
         // (LI) Jacobian w.r.t. process noise (w_km1)
         JacF_wkm1 J_F_wkm1 = -dt_km1 * JacF_wkm1::Identity();
 
