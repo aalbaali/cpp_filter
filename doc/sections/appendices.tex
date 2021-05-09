@@ -1,0 +1,205 @@
+\section{Deriving the invariant extended Kalman filter}
+The filtering problem is a MAP problem given by
+\begin{align}
+    \mbfhat{X}_{k} 
+    &= \argmax_{\mbf{X}_{k}\in G} \pdf{\mbf{X}_{k+1}\mid \mbfhat{X}_{k-1}, \mbf{u}_{k-1}, \mbf{y}_{k}}\\
+    \label{eq:InEKF derivation:pdf Xhat given Xhatkm1 ukm1 yk}
+    &= \argmax_{\mbf{X}_{k-1}\in G} \pdf{\mbf{y}_{k}\mid \mbf{X}_{k}}\pdf{\mbf{X}_{k}\mid\mbfhat{X}_{k-1}, \mbf{u}_{k-1}},
+\end{align}
+where $\mbfhat{X}_{k-1}$ is the InEKF estimate of $\mbf{X}_{k-1}$.
+
+As briefly discussed in Section~\ref{sec:Random variables on Lie groups}, random variables on Lie groups can be described by
+\begin{align}
+    \pdf{\mbf{X}; \mbfbar{X}, \mbs{\Sigma}} &= 
+    \mc{N}\left( \mbf{X}\ominus\mbfbar{X}, \mbs{\Sigma} \right)\\
+    &=
+    \label{eq:pdf of X in Lie group}
+    \eta\exp\left(-\f{1}{2}\norm{
+        \mbf{X}\ominus\mbfbar{X}
+    }_{\mbs{\Sigma}\inv}^{2}\right).
+\end{align}
+
+Let
+\begin{align}
+    \mbfcheck{X}_{k} &\coloneqq (\mbfhat{X}_{k-1}\rplus\mbf{u}_{k-1}) \oplus\mbfrv{w}_{k-1},
+\end{align}
+and let the measurement function be given by
+\begin{align}
+    \mbf{y}_{k} &= \mbf{X}_{k}\mbf{b} + \mbfrv{n}_{k},
+\end{align}
+where $\mbf{b}$ is a know column matrix.
+
+Taking the above assumptions into consideration, and plugging \eqref{eq:pdf of X in Lie group} into the MAP objective function \eqref{eq:InEKF derivation:pdf Xhat given Xhatkm1 ukm1 yk} and taking the negative log, results in
+\begin{align}
+    \mbfhat{X}_{k} 
+    &= \argmax_{\mbf{X}_{k}\in G} \pdf{\mbf{y}_{k}\mid \mbf{X}_{k}}\pdf{\mbf{X}_{k}\mid\mbfhat{X}_{k-1}, \mbf{u}_{k-1}}\\
+    &= \argmin_{\mbf{X}_{k}\in G} \f{1}{2}\norm{\mbf{y}_{k} - \mbf{X}_{k}\mbf{b}}^{2}_{\mbf{R}\inv} 
+    + \f{1}{2}\norm{
+        \mbf{X}_{k}\ominus\mbfcheck{X}_{k}
+    }^{2}_{\mbfcheck{P}_{k}\inv},
+\end{align}
+which is a (nonlinear) least squares problem.
+
+The optimization problem can be rewritten as
+\begin{align}
+    \label{eq:deriving InEKF: NLS et SigmaInv e}
+    \mbfhat{X}_{k} &= \argmin_{\mbf{X}_{k}\in G} \f{1}{2}\mbf{e}(\mbf{X}_{k})^{\trans}\mbs{\Sigma}\inv\mbf{e}(\mbf{X}_{k}),
+\end{align}
+where
+\begin{align}
+    \label{eq:deriving InEKF: error function def}
+    \mbf{e} &: G \to \rnums^{m},\\
+    \mbf{e}(\mbf{X}_{k}) &=
+    \bbm
+        \mbf{X}_{k} \ominus \mbfcheck{X}_{k}\\
+        \mbf{X}_{k}\mbf{b} - \mbf{y}_{k}
+    \ebm,\\
+    \mbs{\Sigma} &=
+    \bbm
+        \mbfcheck{P}_{k} & \\ & \mbf{R}_{k}
+    \ebm.
+\end{align}
+\begin{remark}
+    Note that the error function $\mbf{e}$ is a mapping from the (Lie) group space $G$ to a the Lie algebra vector space $\rnums^{m}$. That's the nice thing about Lie algebra; we can use the standard optimization tools on the Lie algebra Euclidean space.
+\end{remark}
+
+The optimization problem \eqref{eq:deriving InEKF: NLS et SigmaInv e} can be solved using Gauss-Newton algorithm \cite{Nocedal_Numerical_2006,Barfoot_State_2017a,Dellaert_Factor_2017}.
+
+First, get an affine approximation of the error function \eqref{eq:deriving InEKF: error function def} linearized around the operating point $\mbfbar{X}_{k}$. To do so, define the perturbation 
+\begin{align}
+    \mbf{d}_{k} &\coloneqq \mbf{X}_{k}\ominus\mbfbar{X}_{k},\\
+    \label{eq:deriving InEKF: X_k = Xbar oplus dk}
+    \mbf{X}_{k} &= \mbfbar{X}_{k} \oplus\mbf{d}_{k},
+\end{align}
+\marginnote[-1cm]{The variable name $\mbf{d}_{k}\in\rnums^{n_{x}}$ is chosen because it'll be used as a search direction in the optimization.}
+according to the chosen error definition\sidenote{That is, replace `$\ominus$' and `$\oplus$' with the appropriate definition such as `$\liplus$'.}.
+
+Then, the affine approximation can be written as
+\begin{align}
+    \label{eq:InEKF derivation: error affine approx}
+    \mbf{e}(\mbf{X}_{k}) &= \mbf{e}(\mbfbar{X}_{k}\oplus\mbf{d}_{k})\\
+    &\approx \mbf{e}\left( \mbfbar{X}_{k}  \right) + \mbf{J}\mbf{d}_{k},
+\end{align}
+where $\mbf{J}\in\rnums^{m\times n}$ is the Jacobian of the error function with respect to the Lie algebra coordinates.
+\sidenote{Basically, 
+    \begin{align}
+        \mbf{J} &= \pd{\mbf{e}(\mbfbar{X}_{k}\oplus \mbs{\xi}_{k})}{\mbs{\xi}_{k}},
+    \end{align}
+    where $\mbs{\xi}_{k}\in \rnums^{n_{k}}$ is the coordinates of the Lie algebra components.
+}
+
+Plugging the error affine approximation \eqref{eq:InEKF derivation: error affine approx} into the objective function gives the quadratic\sidenote{Quadratic in $\mbf{d}_{k}$.} approximation
+\begin{align}
+    \tilde{J}(\mbf{d}_{k}) &\coloneqq
+    J(\mbfbar{X}_{k}\oplus\mbf{d}_{k}) \\
+    &= \f{1}{2}\mbf{e}(\mbfbar{X}_{k}\oplus\mbf{d}_{k})^{\trans}\mbs{\Sigma}\inv\mbf{e}(\mbfbar{X}_{k}\oplus\mbf{d}_{k})\\    
+    &\approx \f{1}{2}\left( \mbf{e}\left( \mbfbar{X}_{k}  \right) + \mbf{J}\mbf{d}_{k} \right)^{\trans}\mbs{\Sigma}\inv\left( \mbf{e}\left( \mbfbar{X}_{k}  \right) + \mbf{J}\mbf{d}_{k} \right)\\
+    &= \f{1}{2}\mbf{d}_{k}^{\trans}\mbf{J}^{\trans}\mbs{\Sigma}\inv\mbf{J}\mbf{d}_{k} + \mbf{e}\left( \mbfbar{X}_{k} \right)^{\trans}\mbs{\Sigma}\inv\mbf{J}\mbf{d}_{k} + \f{1}{2}\mbf{e}\left( \mbfbar{X}_{k} \right)^{\trans}\mbs{\Sigma}\inv\mbf{e}\left( \mbfbar{X}_{k} \right).
+\end{align}
+If $\mbf{J}$ is full column rank, then the quadratic function $\tilde{J}$ is strongly convex and has a unique minimizer. The minimizer is given by solving
+\begin{align}
+    \label{eq:deriving InEKF: optimal search direction}
+    \mbf{d}_{k}^{\star} &= - \left(\mbf{J}^{\trans}\mbs{\Sigma}\inv\mbf{J}\right)\inv\mbf{J}^{\trans}\mbs{\Sigma}\inv\mbf{e}(\mbfbar{X}_{k}),
+\end{align}
+where
+\begin{align}
+    \label{eq:deriving InEKF: Phat}
+    \mbfhat{P}_{k} &= \left(\mbf{J}^{\trans}\mbs{\Sigma}\inv\mbf{J}\right)\inv
+\end{align}
+at convergence \cite{Barfoot_State_2017a}.
+
+We can try to solve for $\mbf{d}_{k}$ analytically. 
+Say the error function Jacobian is given by
+\begin{align}
+    \label{eq:deriving InEKF: Jacobian eye C}
+    \mbf{J} &= \bbm \gamma\eye \\ \mbf{C}_{k}\ebm,
+\end{align}
+where $\gamma = \pm 1$ depends on the choice of the error definition.
+
+\subsection{The Kalman gain}
+Plugging \eqref{eq:deriving InEKF: Jacobian eye C} into \eqref{eq:deriving InEKF: Phat} gives
+\begin{align}
+    \mbfhat{P}_{k}\inv &= \left(\mbf{J}^{\trans}\mbs{\Sigma}\inv\mbf{J}\right)\\
+    &= 
+    \mbfcheck{P}_{k}\inv + \mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv\mbf{C}_{k}.
+\end{align}
+Pre-multiplying by $\mbfhat{P}_{k}$ gives
+\begin{align}
+    \eye 
+    &= \mbfhat{P}_{k}\mbfcheck{P}_{k}\inv + \underbrace{\mbfhat{P}_{k}\mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv}_{\eqqcolon \mbf{K}_{k}}\mbf{C}_{k}\\
+    \label{eq:deriving InEKF: eye = PhatPcheckinv + KkCk}
+    &=\mbfhat{P}_{k}\mbfcheck{P}_{k}\inv + \mbf{K}_{k}\mbf{C}_{k},
+\end{align}
+where $\mbf{K}_{k}$ is the \emph{Kalman gain}.
+Solving for $\mbfhat{P}_{k}$ results in 
+\begin{align}
+    \mbfhat{P}_{k} &= \left( \eye - \mbf{K}_{k}\mbf{C}_{k} \right)\mbfcheck{P}_{k}.
+\end{align}
+Post-multiply by $\mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv$ gives
+\begin{align}
+    \underbrace{\mbfhat{P}_{k}\mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv}_{\mbf{K}_{k}} &= \left( \eye - \mbf{K}_{k}\mbf{C}_{k} \right)\mbfcheck{P}_{k}\mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv\\
+    \mbf{K}_{k} &=  \mbfcheck{P}_{k}\mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv - \mbf{K}_{k}\mbf{C}_{k}\mbfcheck{P}_{k}\mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv\\
+    \mbf{K}_{k}\left( \eye + \mbf{C}_{k}\mbfcheck{P}_{k}\mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv  \right) &= \mbfcheck{P}_{k}\mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv
+\end{align}
+Post-multiply by $\mbf{R}_{k}$
+\begin{align}
+    \mbf{K}_{k}\left( \mbf{R}_{k} + \mbf{C}_{k}\mbfcheck{P}_{k}\mbf{C}_{k}^{\trans}\right) &= \mbfcheck{P}_{k}\mbf{C}_{k}^{\trans}.
+\end{align}
+Finally, the Kalman gain is given by
+\begin{align}
+    \mbf{K}_{k} &= 
+    \mbfcheck{P}_{k}\mbf{C}_{k}^{\trans} \underbrace{\left( \mbf{R} + \mbf{C}_{k}\mbfcheck{P}_{k}\mbf{C}_{k}^{\trans}\right)\inv}_{\mbf{S}_{k}\inv}.
+\end{align}
+
+\subsection{The search direction}
+Plugging the posterior covariance \eqref{eq:deriving InEKF: Phat} into the optimal search direction \eqref{eq:deriving InEKF: optimal search direction} results in
+\begin{align}
+    \mbf{d}_{k}^{\star} &= - \mbfhat{P}_{k}\mbf{J}^{\trans}\mbs{\Sigma}\inv\mbf{e}(\mbfbar{X}_{k})\\
+    &=
+    -\mbfhat{P}_{k} \bbm \gamma\eye & \mbf{C}_{k}^{\trans} \ebm 
+    \bbm \mbfcheck{P}_{k}\inv & \\ & \mbf{R}_{k}\inv \ebm
+    \bbm \mbfbar{X}_{k}\ominus \mbfcheck{X}_{k} \\\mbfbar{X}_{k}\mbf{b} - \mbf{y}_{k} \ebm
+    \\
+    &= -\mbfhat{P}_{k}\left( \gamma \mbfcheck{P}_{k}\inv\left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) + \mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv(\mbfbar{X}_{k}\mbf{b} - \mbf{y}_{k})\right)\\
+    &= -\gamma\mbfhat{P}_{k}\mbfcheck{P}_{k}\inv\left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) - \underbrace{\mbfhat{P}_{k}\mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv}_{\mbf{K}_{k}}(\mbfbar{X}_{k}\mbf{b} - \mbf{y}_{k})\\    
+    &\overset{\star}{=} 
+    -\gamma\left(\eye - \mbf{K}_{k}\mbf{C}_{k}  \right)\left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) - \underbrace{\mbfhat{P}_{k}\mbf{C}_{k}^{\trans}\mbf{R}_{k}\inv}_{\mbf{K}_{k}}(\mbfbar{X}_{k}\mbf{b} - \mbf{y}_{k}) \\
+    &= -\gamma\left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) + \gamma\mbf{K}_{k}\mbf{C}_{k}\left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) - \mbf{K}_{k}\left( \mbfbar{X}_{k}\mbf{b} - \mbf{y}_{k} \right)\\
+    &= -\gamma\left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) + \mbf{K}_{k}\left(\gamma \mbf{C}_{k} \left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) + \left( \mbf{y}_{k} - \mbfbar{X}_{k}\mbf{b}\right)\right)\\
+    &= -\gamma\left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) + \mbf{K}_{k}\left(\gamma \mbf{C}_{k} \left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) + \left( \mbf{y}_{k} - \mbfbar{X}_{k}\mbf{b}\right)\right)\\
+    &= -\gamma\left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) + \mbf{K}_{k}\mbf{z}_{k}(\mbfbar{X}_{k}),
+\end{align}
+\marginnote[-3.5cm]{$\star$ From \eqref{eq:deriving InEKF: eye = PhatPcheckinv + KkCk}, 
+    \begin{align}
+        \mbfhat{P}_{k}\mbfcheck{P}_{k}\inv &= \eye - \mbf{K}_{k}\mbf{C}_{k}.
+    \end{align}
+}
+where 
+\begin{align}
+    \label{eq:deriving InEKF: general innovation}
+    \mbf{z}_{k}(\mbfbar{X}_{k}) &= \gamma\mbf{C}_{k}\left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) + \mbf{y}_{k} - \mbfbar{X}_{k}\mbf{b}
+\end{align}
+is the innovation.
+
+Finally, using \eqref{eq:deriving InEKF: X_k = Xbar oplus dk}, the posterior estimate is 
+\begin{align}
+    \mbfhat{X}_{k}
+    &= \mbfbar{X}\oplus\mbf{d}_{k}^{\star}\\
+    \label{eq:deriving InEKF: general update equation}
+    &= \mbfbar{X}\oplus\left(-\gamma\left( \mbfbar{X}_{k}\ominus\mbfcheck{X}_{k} \right) + \mbf{K}_{k}\mbf{z}_{k}(\mbfbar{X}_{k})\right).
+\end{align}
+Note that if the linearization point is defined as
+\begin{align}
+    \mbfbar{X}_{k} &\coloneqq \mbfcheck{X}_{k}, 
+\end{align}
+then 
+the innovation \eqref{eq:deriving InEKF: general innovation} simplifies to
+\begin{align}
+    \mbf{z}_{k}(\mbfcheck{X}_{k}) &= \mbf{y}_{k} - \mbfbar{X}_{k}\mbf{b},
+\end{align}
+and the update equation \eqref{eq:deriving InEKF: general update equation} becomes
+\begin{align}
+    \mbfbar{X}_{k} &= \mbfcheck{X}_{k}\oplus\left( \mbf{K}_{k}\mbf{z}_{k}(\mbfcheck{X}_{k}) \right)\\
+    &= \mbfcheck{X}_{k}\oplus\left( \mbf{K}_{k}(\mbf{y}_{k} - \mbfcheck{X}_{k}\mbf{b}) \right).
+\end{align}
+This is the invariant extended Kalman filter correction.
