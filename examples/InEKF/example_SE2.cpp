@@ -15,5 +15,6 @@ int main(int argc, const char* argv[]){
     // Run L-InEKF
     std::vector< PoseEstimate> X_hat = GetSe2InekfEstimates( filename_config);
 
+    std::cout << "Exporting L-InEKF estimates to " << config["filename_kf"].as<std::string>() << std::endl;
     RV::IO::write( X_hat, filename_kf, "X");
 }
