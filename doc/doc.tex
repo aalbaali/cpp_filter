@@ -1,8 +1,12 @@
 \documentclass[nobib]{tufte-handout}
 \usepackage{amro-common}
 \usepackage{amro-tufte}
+\usepackage[toc,page]{appendix}
 
-\newcommand{\cpp}{C\texttt{++}}
+% Renew the PDF symbol
+\renewcommand{\symPdf}{p}
+
+\newcommand{\cpp}{C\texttt{++}\xspace}
 
 % Might prevent marginnotes from jumping to another page
 \def\mathnote#1{%
@@ -26,7 +30,7 @@
 
 
 
-\title{Filtering in C++}
+\title{Invariant Filtering}
 \author{Amro Al~Baali}
 
 % Generates the index
@@ -227,6 +231,7 @@
     where $\mbf{b}$ is some known constant column matrix.
 
     \subsection{Random variables on Lie groups}
+    \label{sec:Random variables on Lie groups}
     In the Euclidean case, Remark~\ref{remark:splitting gaussian rv into sum} can be used to describe a random variable. However, how can we do that in a non-Euclidean case? Let's restrict ourselves with Lie groups. 
      
     
@@ -333,9 +338,35 @@
     \marginnote[-1.5cm]{Note that the Jacobian w.r.t. the state  $\mbf{H}_{k}$ is state-independent. That is, it does not depend on the state $\mbf{X}_{k}$.}
     where 
     \begin{align}
-        \mbs{\xi}\expand\mbf{b} \coloneqq \mbf{b}^{\odot}\mbs{\xi}
+        \mbs{\xi}\expand\mbf{b} \coloneqq \mbf{b}^{\odot}\mbs{\xi}\\
     \end{align}
-    is defined in \cite[pg.~253]{Barfoot_State_2017a}.
+    is defined 
+    \begin{align}
+        \bbm
+            \mbf{b}_{1:3}\\
+            b_{4}
+        \ebm^{\odot}
+        &=
+        \bbm
+            -\mbf{b}_{1:3}\crossop & b_{4}\eye \\ \mbf{0} & \mbf{0}
+        \ebm
+    \end{align}
+    for $SE(3)$ and 
+    \begin{align}
+        \bbm
+            \mbf{b}_{1:2}\\
+            b_{3}
+        \ebm^{\odot}
+        &=
+        \bbm
+            (1)\crossop\mbf{b}_{1:2} & b_{3}\eye \\ \mbf{0} & \mbf{0}
+        \ebm\\
+        &=
+        \bbm
+            \bbm 0 & -1\\1 & 0 \ebm\mbf{b}_{1:2} & b_{3}\eye \\ \mbf{0} & \mbf{0}
+        \ebm\\
+    \end{align}
+    for $SE(2)$.
     
     Plugging the above results into \eqref{eq:InEKF: correction error as a function of innovation} gives the approximation
     \begin{align}
@@ -479,6 +510,10 @@
         \label{fig:se2_example_error_plots}
     \end{figure}
 
+    \clearpage`
+    \begin{appendices}
+        \input{sections/appendices.tex}
+    \end{appendices}
 
     \clearpage
     % \backmatter

@@ -58,4 +58,11 @@
     // Function that takes the .yml filename (including path) and returns the InEKF estiamtes.
     std::vector< PoseEstimate> GetSe2InekfEstimates( const std::string filename_config);
 
+    // Function that takes measurement RV variables and returns the InEKF estimates (it's a different function signature)
+    std::vector< PoseEstimate> GetSe2InekfEstimates( 
+        PoseEstimate meas_prior, 
+        std::vector< MeasGyro> meas_gyro,
+        std::vector< MeasVel> meas_vel,
+        std::vector< MeasGps> meas_gps);
+
 #endif

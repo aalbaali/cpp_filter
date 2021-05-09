@@ -1,44 +1,13 @@
 #include "inekf_se2.h"
 
+std::vector< PoseEstimate> GetSe2InekfEstimates( 
+        PoseEstimate meas_prior, 
+        std::vector< MeasGyro> meas_gyro,
+        std::vector< MeasVel> meas_vel,
+        std::vector< MeasGps> meas_gps){
 
-std::vector< PoseEstimate> GetSe2InekfEstimates( const std::string filename_config){
-    // @param[in] filename_config 
-    //      Filename (including path) of the .yml configuration file.
-    // @return std::vector of PoseEstimate (instance of RandomVariable class).
-    // Assumptions:
-    //      - Assumes the files include GPS measurements as exteroceptive measurements.
-
-    // Read .yml configuration file
-    YAML::Node config= YAML::LoadFile( filename_config);
-#ifndef NDEBUG
-    // Display message if in debug model
-    std::cout << "Reading .yml configuration from '" << filename_config << "'" << std::endl;        
-#endif
-
-    // Read sensor files
-    // Prior
-    const std::string filename_prior = config["filename_prior"].as<std::string>();
-    //  Gyro
-    const std::string filename_gyro  = config["filename_gyro"].as<std::string>();
-    //  Velocity
-    const std::string filename_vel   = config["filename_vel"].as<std::string>();
-    //  GPS
-    const std::string filename_gps   = config["filename_gps"].as<std::string>();
-    // Estimated states
-    // const std::string filename_out   = config["filename_out"].as<std::string>();
-
-    // Import data
-    //  Prior
-    PoseEstimate meas_prior = RV::IO::import< PoseEstimate>( filename_prior)[0];
-    //  Gyro
-    std::vector< MeasGyro> meas_gyro      = RV::IO::import< MeasGyro>( filename_gyro);
-    //  Velocity
-    std::vector< MeasVel> meas_vel        = RV::IO::import< MeasVel>( filename_vel);
-    //  GPS
-    std::vector< MeasGps> meas_gps        = RV::IO::import< MeasGps>( filename_gps);
-    
-    // Number of poses
-    const unsigned int K = meas_gyro.size() + 1;
+        // Number of poses
+    const unsigned int K = meas_gyro.size();
     // Lambda function that extracts the sample time (dt)
     auto dt_func = [&meas_gyro](int k){
         return meas_gyro[k].time() - meas_gyro[k-1].time();
@@ -66,7 +35,7 @@ std::vector< PoseEstimate> GetSe2InekfEstimates( const std::string filename_conf
     // Filtering
     for( size_t k = 1; k < K; k++){
         // Store time steps
-        X_hat[k].setTime( meas_vel[k-1].time());
+        X_hat[k].setTime( meas_vel[k].time());
 
         // Interoceptive measurements at k - 1
         //  Velocity
@@ -96,7 +65,7 @@ std::vector< PoseEstimate> GetSe2InekfEstimates( const std::string filename_conf
         // Predict
         Pose X_k = Xkm1.plus( u_km1);
         // (LI) Jacobian w.r.t. state
-        JacF_Xkm1 J_F_xkm1 = (-u_km1).exp().adj();
+        JacF_Xkm1 J_F_xkm1 = (-dt_km1 * u_km1).exp().adj();
         // (LI) Jacobian w.r.t. process noise (w_km1)
         JacF_wkm1 J_F_wkm1 = -dt_km1 * JacF_wkm1::Identity();
 
@@ -150,4 +119,46 @@ std::vector< PoseEstimate> GetSe2InekfEstimates( const std::string filename_conf
     }   
 
     return X_hat;
+}
+
+std::vector< PoseEstimate> GetSe2InekfEstimates( const std::string filename_config){
+    // @param[in] filename_config 
+    //      Filename (including path) of the .yml configuration file.
+    // @return std::vector of PoseEstimate (instance of RandomVariable class).
+    // Assumptions:
+    //      - Assumes the files include GPS measurements as exteroceptive measurements.
+
+    // Read .yml configuration file
+    YAML::Node config= YAML::LoadFile( filename_config);
+#ifndef NDEBUG
+    // Display message if in debug model
+    std::cout << "Reading .yml configuration from '" << filename_config << "'" << std::endl;        
+#endif
+
+    // Read sensor files
+    // Prior
+    const std::string filename_prior = config["filename_prior"].as<std::string>();
+    //  Gyro
+    const std::string filename_gyro  = config["filename_gyro"].as<std::string>();
+    //  Velocity
+    const std::string filename_vel   = config["filename_vel"].as<std::string>();
+    //  GPS
+    const std::string filename_gps   = config["filename_gps"].as<std::string>();
+
+    // Import data
+    //  Prior
+    PoseEstimate meas_prior = RV::IO::import< PoseEstimate>( filename_prior)[0];
+    //  Gyro
+    std::vector< MeasGyro> meas_gyro      = RV::IO::import< MeasGyro>( filename_gyro);
+    //  Velocity
+    std::vector< MeasVel> meas_vel        = RV::IO::import< MeasVel>( filename_vel);
+    //  GPS
+    std::vector< MeasGps> meas_gps        = RV::IO::import< MeasGps>( filename_gps);
+    
+    return GetSe2InekfEstimates(
+                meas_prior,
+                meas_gyro,
+                meas_vel,
+                meas_gps
+            );    
 }
