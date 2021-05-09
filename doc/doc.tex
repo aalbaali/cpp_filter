@@ -1,8 +1,12 @@
 \documentclass[nobib]{tufte-handout}
 \usepackage{amro-common}
 \usepackage{amro-tufte}
+\usepackage[toc,page]{appendix}
 
-\newcommand{\cpp}{C\texttt{++}}
+% Renew the PDF symbol
+\renewcommand{\symPdf}{p}
+
+\newcommand{\cpp}{C\texttt{++}\xspace}
 
 % Might prevent marginnotes from jumping to another page
 \def\mathnote#1{%
@@ -227,6 +231,7 @@
     where $\mbf{b}$ is some known constant column matrix.
 
     \subsection{Random variables on Lie groups}
+    \label{sec:Random variables on Lie groups}
     In the Euclidean case, Remark~\ref{remark:splitting gaussian rv into sum} can be used to describe a random variable. However, how can we do that in a non-Euclidean case? Let's restrict ourselves with Lie groups. 
      
     
@@ -505,6 +510,10 @@
         \label{fig:se2_example_error_plots}
     \end{figure}
 
+    \clearpage`
+    \begin{appendices}
+        \input{sections/appendices.tex}
+    \end{appendices}
 
     \clearpage
     % \backmatter
