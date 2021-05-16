@@ -32,8 +32,8 @@ std::vector< PoseEstimate> GetSe2InekfEstimates(
     
     // Index that keeps track of the gps measurements
     size_t idx_gps = 0;
-    // P_hat_km1
-    CovPose P_hat_km1 = X_hat[0].cov();
+    // P_hat_km1 (convert from [theta; pos] to [pos; theta])
+    CovPose P_hat_km1 = CovThetaPosToCovPosTheta( X_hat[0].cov());
 
     // Filtering
     for( size_t k = 1; k < K; k++){
@@ -120,19 +120,22 @@ std::vector< PoseEstimate> GetSe2InekfEstimates(
             idx_gps++;
         }
 
+        // Ensure symmetry
+        P_k = 0.5 * (P_k + P_k.transpose().eval());
+        
         // Update covariance at "previous" time step
         P_hat_km1 = P_k;
 
-        // Switch heading-covariance with position covariance
-        CovPose P_k_th_r = CovPosThetaToCovThetaPos( P_k);
         
-        // Ensure symmetry
-        P_k_th_r = 0.5 * ( P_k_th_r + P_k_th_r.transpose().eval());
+        
+        // // Ensure symmetry
+        // P_k_th_r = 0.5 * ( P_k_th_r + P_k_th_r.transpose().eval());
 
         // Store estimates
         X_hat[k].setMean( X_k.transform());
         // Store the covariance in the appropriate format [th; pos]
-        X_hat[k].setCov( P_k_th_r);
+        // Note: switch covariance type from covariance on [position; theta] to [theta; position] (to do the analysis)
+        X_hat[k].setCov( CovPosThetaToCovThetaPos( P_k));
         X_hat[k].setCovIsGlobal( false);
     }   
 
