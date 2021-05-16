@@ -69,4 +69,9 @@
         std::vector< MeasVel> meas_vel,
         std::vector< MeasGps> meas_gps);
 
+    // Take covariance on [position; theta] and return covariance on [theta; position]
+    CovPose CovPosThetaToCovThetaPos( CovPose P_pos_th);
+
+    // Take covariance on [theta; position] and return covariance on [position; theta]
+    CovPose CovThetaPosToCovPosTheta( CovPose P_th_pos);
 #endif

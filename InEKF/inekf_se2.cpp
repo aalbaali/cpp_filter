@@ -124,19 +124,10 @@ std::vector< PoseEstimate> GetSe2InekfEstimates(
         P_hat_km1 = P_k;
 
         // Switch heading-covariance with position covariance
-        CovPose P_k_th_r;
-        P_k_th_r( 0, 0)              = P_k( 2, 2);
-        //  X-cov pos-heading
-        P_k_th_r.bottomLeftCorner< 2, 1>() = P_k.topRightCorner< 2, 1>();
-        //  X-cov heading-pos
-        P_k_th_r.topRightCorner< 1, 2>() = P_k.bottomLeftCorner< 1, 2>();
-        //  Cov pos
-        P_k_th_r.bottomRightCorner<2, 2>() =P_k.topLeftCorner< 2, 2>();
-
-        // P_k = P_k_th_r;
+        CovPose P_k_th_r = CovPosThetaToCovThetaPos( P_k);
         
         // Ensure symmetry
-        P_k_th_r = 0.5 * ( P_k_th_r + P_k_th_r.transpose());
+        P_k_th_r = 0.5 * ( P_k_th_r + P_k_th_r.transpose().eval());
 
         // Store estimates
         X_hat[k].setMean( X_k.transform());
@@ -188,4 +179,30 @@ std::vector< PoseEstimate> GetSe2InekfEstimates( const std::string filename_conf
                 meas_vel,
                 meas_gps
             );    
+}
+
+CovPose CovPosThetaToCovThetaPos( CovPose P_pos_th){
+        CovPose P_th_r;
+        P_th_r( 0, 0)                     = P_pos_th( 2, 2);
+        //  X-cov pos-heading
+        P_th_r.bottomLeftCorner< 2, 1>()  = P_pos_th.topRightCorner< 2, 1>();
+        //  X-cov heading-pos
+        P_th_r.topRightCorner< 1, 2>()    = P_pos_th.bottomLeftCorner< 1, 2>();
+        //  Cov pos
+        P_th_r.bottomRightCorner<2, 2>()  = P_pos_th.topLeftCorner< 2, 2>();    
+
+        return P_th_r;
+}
+
+CovPose CovThetaPosToCovPosTheta( CovPose P_th_pos){
+        CovPose P_pos_th;
+        P_pos_th( 2, 2)                     = P_th_pos( 0, 0);
+        //  X-cov pos-heading
+        P_pos_th.topRightCorner< 2, 1>()  = P_th_pos.bottomLeftCorner< 2, 1>();
+        //  X-cov heading-pos
+        P_pos_th.bottomLeftCorner< 1, 2>() = P_th_pos.topRightCorner< 1, 2>();
+        //  Cov pos
+        P_pos_th.topLeftCorner< 2, 2>()  = P_th_pos.bottomRightCorner<2, 2>();    
+
+        return P_pos_th;
 }
