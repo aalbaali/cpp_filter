@@ -6,7 +6,7 @@ int main(int argc, const char* argv[]){
     YAML::Node config;
     std::string filename_config;
     filename_config = argv[1];
-    std::cout << argc << " arguments passed: " << filename_config << std::endl;
+    std::cout << "Filename passed: " << filename_config << std::endl;
     config = YAML::LoadFile( filename_config);
     
     // Get output file name

@@ -32,6 +32,9 @@ std::vector< PoseEstimate> GetSe2InekfEstimates(
     
     // Index that keeps track of the gps measurements
     size_t idx_gps = 0;
+    // P_hat_km1
+    CovPose P_hat_km1 = X_hat[0].cov();
+
     // Filtering
     for( size_t k = 1; k < K; k++){
         // Store time steps
@@ -45,9 +48,9 @@ std::vector< PoseEstimate> GetSe2InekfEstimates(
         // Get the tangent coordinates (twist)
         double dt_km1 = dt_func( k);        
         LieAlg u_km1(
-                dt_km1 * u_v_km1[0], 
-                dt_km1 * u_v_km1[1], 
-                dt_km1 * u_g_km1[0]
+                u_v_km1[0], 
+                u_v_km1[1], 
+                u_g_km1[0]
                 );
         // Covariance on process noise
         CovQ Q_km1 = CovQ::Zero();
@@ -56,28 +59,27 @@ std::vector< PoseEstimate> GetSe2InekfEstimates(
 
         // Get matrix at k - 1
         EPose Xkm1_mat = X_hat[k-1].mean();
-        // Covariance at k - 1
-        CovPose Cov_Xkm1 = X_hat[k-1].cov();
+        // Note: covariance is already updated from previous iteration
 
         // Set pose at previous estimate
         Pose Xkm1( Xkm1_mat(0, 2), Xkm1_mat(1, 2), Xkm1_mat(0, 0), Xkm1_mat(1, 0));
 
         // Predict
-        Pose X_k = Xkm1.plus( u_km1);
+        Pose X_k = Xkm1.plus( dt_km1 * u_km1);
         // (LI) Jacobian w.r.t. state
         JacF_Xkm1 J_F_xkm1 = (-dt_km1 * u_km1).exp().adj();
         // (LI) Jacobian w.r.t. process noise (w_km1)
         JacF_wkm1 J_F_wkm1 = -dt_km1 * JacF_wkm1::Identity();
 
         // Compute covariance on X_k
-        CovPose P_k =   J_F_xkm1 * Cov_Xkm1 * J_F_xkm1.transpose() + 
+        CovPose P_k =   J_F_xkm1 * P_hat_km1 * J_F_xkm1.transpose() + 
                         J_F_wkm1 * Q_km1    * J_F_wkm1.transpose();
         
         // Correction
         if( idx_gps < meas_gps.size() && (meas_gps[idx_gps].time() <= X_hat[k].time())){
             // Implement a correction
-            auto R_k = meas_gps[idx_gps].cov();
-            auto y_k = meas_gps[idx_gps].mean();
+            CovGps R_k   = meas_gps[idx_gps].cov();
+            EMeasGps y_k = meas_gps[idx_gps].mean();
             // Jacobian of measurement function w.r.t. state
             JacYgps_Xk H_k;
             // Jacobian of innovation w.r.t. measurement noise
@@ -86,35 +88,60 @@ std::vector< PoseEstimate> GetSe2InekfEstimates(
             H_k.topRightCorner< 2, 1>().setZero();
 
             // Predicted measurement            
-            auto y_check_k = X_k.translation();
+            EMeasGps y_check_k = X_k.translation();
             
             // Innovation
-            auto z = X_k.rotation().transpose() * (y_k - y_check_k);
+            EMeasGps z = X_k.rotation().transpose() * (y_k - y_check_k);
 
             // Compute S_k
             JacYgps_nk S_k = H_k * P_k * H_k.transpose() + 
                              M_k * R_k * M_k.transpose();
 
             // Ensure symmetry
-            S_k = 0.5 * (S_k + S_k.transpose());
+            JacYgps_nk S_k_tmp = 0.5 * (S_k + S_k.transpose());
+            S_k = S_k_tmp;
             // Compute Kalman gain
             Eigen::Matrix<double, dof_x, dof_gps> K_k = P_k * H_k.transpose() * S_k.inverse();
 
             // Update state estimate (xhat) using a LI error
-            X_k = X_k + (LieAlg( - K_k * z));
+            // X_k = X_k.plus( LieAlg( - K_k * z));
+            X_k += LieAlg( - K_k * z);
+            // Pose X_hat_k = X_k.plus( LieAlg( - K_k * z));            
+            // X_k = X_hat_k;
+            
             // Update covariance
             P_k = ((CovPose::Identity()) - K_k * H_k) * P_k 
                     * ((CovPose::Identity()) - K_k * H_k).transpose() + 
                     K_k * M_k * R_k * M_k.transpose() * K_k.transpose();
             // Ensure symmetry
-            P_k = 0.5 * (P_k + P_k.transpose());
+            CovPose P_k_tmp = 0.5 * (P_k + P_k.transpose());
+            P_k = P_k_tmp;
 
             idx_gps++;
         }
 
+        // Update covariance at "previous" time step
+        P_hat_km1 = P_k;
+
+        // Switch heading-covariance with position covariance
+        CovPose P_k_th_r;
+        P_k_th_r( 0, 0)              = P_k( 2, 2);
+        //  X-cov pos-heading
+        P_k_th_r.bottomLeftCorner< 2, 1>() = P_k.topRightCorner< 2, 1>();
+        //  X-cov heading-pos
+        P_k_th_r.topRightCorner< 1, 2>() = P_k.bottomLeftCorner< 1, 2>();
+        //  Cov pos
+        P_k_th_r.bottomRightCorner<2, 2>() =P_k.topLeftCorner< 2, 2>();
+
+        // P_k = P_k_th_r;
+        
+        // Ensure symmetry
+        P_k_th_r = 0.5 * ( P_k_th_r + P_k_th_r.transpose());
+
         // Store estimates
         X_hat[k].setMean( X_k.transform());
-        X_hat[k].setCov( P_k);
+        // Store the covariance in the appropriate format [th; pos]
+        X_hat[k].setCov( P_k_th_r);
         X_hat[k].setCovIsGlobal( false);
     }   
 

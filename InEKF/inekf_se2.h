@@ -50,6 +50,10 @@
     //  Covariance on process noise
     typedef Eigen::Matrix< double, dof_gyro + dof_vel, dof_gyro + dof_vel> CovQ;
     // GPS measurement model
+    //  GPS measurement Eigen type
+    typedef Eigen::Matrix< double, dof_gps, 1>              EMeasGps;
+    //  Covariance on measurement noise
+    typedef Eigen::Matrix< double, dof_gps, dof_gps>        CovGps;
     //  Jacobian w.r.t. state 
     typedef Eigen::Matrix< double, dof_gps, dof_x>          JacYgps_Xk;
     //  Jacobian w.r.t. measurement noise 
