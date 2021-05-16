@@ -50,6 +50,10 @@
     //  Covariance on process noise
     typedef Eigen::Matrix< double, dof_gyro + dof_vel, dof_gyro + dof_vel> CovQ;
     // GPS measurement model
+    //  GPS measurement Eigen type
+    typedef Eigen::Matrix< double, dof_gps, 1>              EMeasGps;
+    //  Covariance on measurement noise
+    typedef Eigen::Matrix< double, dof_gps, dof_gps>        CovGps;
     //  Jacobian w.r.t. state 
     typedef Eigen::Matrix< double, dof_gps, dof_x>          JacYgps_Xk;
     //  Jacobian w.r.t. measurement noise 
@@ -65,4 +69,9 @@
         std::vector< MeasVel> meas_vel,
         std::vector< MeasGps> meas_gps);
 
+    // Take covariance on [position; theta] and return covariance on [theta; position]
+    CovPose CovPosThetaToCovThetaPos( CovPose P_pos_th);
+
+    // Take covariance on [theta; position] and return covariance on [position; theta]
+    CovPose CovThetaPosToCovPosTheta( CovPose P_th_pos);
 #endif
