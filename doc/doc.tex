@@ -3,6 +3,17 @@
 \usepackage{amro-tufte}
 \usepackage[toc,page]{appendix}
 
+\makeatletter
+% Remove paragraph indentation
+\renewcommand{\@tufte@reset@par}{%
+  \setlength{\RaggedRightParindent}{0.0pc}%
+  \setlength{\JustifyingParindent}{0.0pc}%
+  \setlength{\parindent}{0pc}%
+  \setlength{\parskip}{\baselineskip}%
+}
+\@tufte@reset@par
+\makeatother
+
 % Renew the PDF symbol
 \renewcommand{\symPdf}{p}
 
