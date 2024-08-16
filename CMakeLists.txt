@@ -21,6 +21,7 @@ endif()
 ########################################
 # include CMakePackageConfigHelpers macro
 include(CMakePackageConfigHelpers)
+add_subdirectory(extern/RandomVariable)
 
 # generate the version file for the config file
 write_basic_package_version_file(
